@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NTUEE 學分管理系統</title>
+    <style>
+        /* ===== 全域樣式 ===== */
+        :root {
+            --base-font-size: 16px;
+            --inner-font-size: calc(var(--base-font-size) * 0.85);
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+        body { background: #f4f7fc; padding: 20px 10px; display: flex; justify-content: center; font-size: var(--base-font-size); }
+        .container { max-width: 1400px; width: 100%; background: white; padding: 20px 20px 40px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+        h1 { font-size: calc(var(--base-font-size) * 1.5); color: #003366; border-left: 6px solid #003366; padding-left: 16px; margin-top: 0; }
+        .subtitle { color: #555; font-size: calc(var(--base-font-size) * 0.875); margin-bottom: 20px; }
+
+        .top-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px 24px;
+            background: #e9edf4;
+            padding: 10px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .font-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .font-control label {
+            font-weight: 600;
+            color: #003366;
+            font-size: var(--inner-font-size);
+        }
+        .font-control input[type="range"] {
+            width: 140px;
+            cursor: pointer;
+        }
+        .font-control .size-display {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 700;
+            color: #003366;
+        }
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+        .export-btn, .import-btn {
+            background: #1e7e34;
+            color: white;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: var(--inner-font-size);
+        }
+        .export-btn:hover { background: #14622a; }
+        .import-btn { background: #8e44ad; }
+        .import-btn:hover { background: #6c3483; }
+        #fileInput { display: none; }
+
+        /* ===== 頂部卡片（新增三角與摺疊） ===== */
+        .credit-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+            gap: 12px;
+            background: #e9edf4;
+            padding: 15px 16px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+        }
+        .credit-item {
+            background: white;
+            border-radius: 12px;
+            padding: 8px 10px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            position: relative;
+            cursor: default;
+        }
+        .credit-item .label {
+            font-size: var(--inner-font-size);
+            font-weight: 600;
+            color: #003366;
+        }
+        .credit-item .value {
+            font-size: calc(var(--base-font-size) * 1.4);
+            font-weight: 700;
+            color: #003366;
+        }
+        /* 規則文字區塊（預設摺疊） */
+        .credit-item .rule-text {
+            display: none; /* 預設隱藏 */
+            font-size: var(--inner-font-size);
+            color: #000;
+            font-weight: normal;
+            margin-top: 6px;
+            padding: 6px 8px;
+            background: #f4f7fc;
+            border-radius: 6px;
+            text-align: left;
+            word-break: break-word;
+            line-height: 1.6;
+            min-height: 28px;
+            border: 1px dashed transparent;
+            transition: 0.15s;
+            white-space: pre-wrap; /* 保留換行 */
+        }
+        .credit-item .rule-text:hover {
+            border-color: #b0c4de;
+        }
+        .credit-item .rule-text:focus {
+            outline: 2px solid #003366;
+            background: white;
+            border-color: #003366;
+        }
+        /* 展開時顯示 */
+        .credit-item.expanded .rule-text {
+            display: block;
+        }
+        /* 三角按鈕 */
+        .credit-item .toggle-btn {
+            position: absolute;
+            bottom: 4px;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #888;
+            padding: 0 4px;
+            line-height: 1;
+            transition: transform 0.2s;
+        }
+        .credit-item .toggle-btn:hover {
+            color: #003366;
+        }
+        .credit-item.expanded .toggle-btn {
+            transform: rotate(180deg);
+        }
+
+        .total-credit {
+            background: #003366;
+            color: white !important;
+        }
+        .total-credit .value { color: white !important; }
+        .total-credit .label { color: #eee; }
+        .total-credit .rule-text { display: none !important; }
+        .total-credit .toggle-btn { display: none; }
+
+        .section-title { font-size: calc(var(--base-font-size) * 1.25); font-weight: 700; margin: 25px 0 12px; color: #003366; }
+        .credit-input-table { width: 100%; border-collapse: collapse; font-size: var(--inner-font-size); }
+        .credit-input-table th, .credit-input-table td { border: 1px solid #ccc; padding: 5px 3px; text-align: center; vertical-align: middle; }
+        .credit-input-table th { background: #003366; color: white; font-weight: 600; }
+        .credit-input-table .semester-header { background: #d9e2ef; color: #003366; font-weight: 700; min-width: 70px; cursor: pointer; transition: 0.2s; }
+        .credit-input-table .semester-header:hover { background: #b4cbe0; }
+        .credit-input-table td input { width: 42px; padding: 4px 2px; text-align: center; border: 1px solid #b0c4de; border-radius: 6px; font-size: var(--inner-font-size); font-weight: 600; background: #fafcff; }
+        .credit-input-table td input:focus { outline: 2px solid #003366; background: white; }
+        .clickable-cell { cursor: pointer; transition: background 0.2s; background: #f8faff; }
+        .clickable-cell:hover { background: #d4e2fc; }
+        .cell-has-data { background: #e0f0e0 !important; }
+        .cell-has-data::after { content: " 📘"; font-size: calc(var(--inner-font-size) * 0.8); }
+        .tfoot-total { background: #003366 !important; color: white !important; font-weight: 700; }
+        .tfoot-total td { background: #003366 !important; color: white !important; border-color: #002244; }
+        .tfoot-total .total-number { font-size: calc(var(--base-font-size) * 1.1); background: #ffcc00; color: #003366; padding: 2px 14px; border-radius: 30px; display: inline-block; font-weight: 800; }
+        .tfoot-total .progress-text { font-size: var(--inner-font-size); color: #ffcc00; display: inline-block; margin-left: 6px; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); justify-content: center; align-items: center; z-index: 999; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; width: 820px; max-width: 96vw; max-height: 94vh; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; }
+        .modal-header { flex-shrink: 0; padding: 18px 24px 12px 24px; border-bottom: 2px solid #e9edf4; position: relative; }
+        .modal-header h2 { margin: 0; color: #003366; font-size: calc(var(--base-font-size) * 1.25); padding-right: 40px; }
+        .modal-close { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: calc(var(--base-font-size) * 1.8); cursor: pointer; color: #888; background: none; border: none; line-height: 1; }
+        .modal-close:hover { color: #000; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 16px 24px 24px 24px; }
+
+        .timetable-table { width: 100%; border-collapse: collapse; font-size: var(--inner-font-size); background: #e9edf4; border-radius: 8px; overflow: hidden; table-layout: fixed; }
+        .timetable-table th, .timetable-table td { border: 1px solid #ccc; padding: 4px 2px; text-align: center; vertical-align: middle; background: white; height: calc(var(--base-font-size) * 2.2); width: 14%; }
+        .timetable-table th { background: #003366; color: white; font-weight: 700; padding: 6px 0; }
+        .timetable-table .period-label {
+            background: #d9e2ef;
+            font-weight: 700;
+            color: #003366;
+            padding: 4px 0;
+            width: 45px;
+            font-size: calc(var(--inner-font-size) * 0.7);
+            line-height: 1.2;
+            white-space: pre-line;
+        }
+        .timetable-table .slot { position: relative; padding: 2px; }
+        .timetable-table .slot .course-block {
+            background: #d4e2fc;
+            color: #003366;
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: var(--inner-font-size);
+            font-weight: 600;
+            cursor: pointer;
+            margin: 1px auto;
+            border: 1px solid #b0c4de;
+            text-align: center;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+            display: inline-block;
+            width: auto;
+            transition: 0.1s;
+        }
+        .timetable-table .slot .course-block:hover { background: #a8c4f0; border-color: #003366; }
+        .timetable-table .slot.editable { background: #f4f7fc; cursor: pointer; border: 1px solid transparent; transition: 0.15s; min-height: calc(var(--base-font-size) * 2.2); }
+        .timetable-table .slot.editable:hover { border-color: #003366; }
+        .timetable-table .slot.editable.selected { background: #003366; color: white; font-weight: 600; border-color: #003366; }
+        .timetable-table .slot.editable.selected::after { content: "✓"; font-size: var(--inner-font-size); display: block; color: white; line-height: calc(var(--base-font-size) * 1.8); }
+        .timetable-table .slot.occupied { background: #e0e0e0 !important; cursor: not-allowed; opacity: 0.6; border-color: #ccc; }
+        .timetable-table .slot.occupied::after { content: "▣"; font-size: var(--inner-font-size); color: #888; display: block; line-height: calc(var(--base-font-size) * 1.8); }
+
+        .course-list-box { margin-top: 16px; border-top: 2px solid #003366; padding-top: 12px; }
+        .course-list-box h3 { margin: 0 0 8px 0; font-size: var(--inner-font-size); color: #003366; }
+        .course-list-box ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+        .course-list-box ul li { padding: 4px 14px; border-radius: 20px; font-size: var(--inner-font-size); border-left: 6px solid #888; background: #f4f7fc; display: inline-block; }
+        .course-list-box ul li .cname { font-weight: 600; }
+        .course-list-box ul li .cinfo { color: #555; font-size: var(--inner-font-size); margin-left: 6px; }
+
+        .form-row { display: flex; flex-wrap: wrap; gap: 10px 15px; margin: 12px 0 8px; }
+        .form-group { flex: 1 0 calc(50% - 20px); min-width: 140px; }
+        .form-group label { display: block; font-size: var(--inner-font-size); font-weight: 600; color: #333; margin-bottom: 2px; }
+        .form-group input { width: 100%; padding: 6px 8px; border: 1px solid #b0c4de; border-radius: 6px; font-size: var(--inner-font-size); background: #fafcff; }
+        .form-group input:focus { outline: 2px solid #003366; }
+
+        .btn-primary, .btn-success {
+            font-size: var(--inner-font-size);
+            font-weight: 700;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .btn-primary { background: #003366; color: white; }
+        .btn-primary:hover { background: #002244; }
+        .btn-success { background: #1e7e34; color: white; width: 100%; margin-top: 10px; }
+        .btn-success:hover { background: #14622a; }
+        .btn-secondary { background: #6c757d; color: white; border: none; padding: 4px 14px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: var(--inner-font-size); }
+        .btn-secondary:hover { background: #5a6268; }
+
+        .course-list { margin-top: 12px; border-top: 1px solid #ddd; padding-top: 10px; max-height: 200px; overflow-y: auto; }
+        .course-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #f4f7fc; border-radius: 6px; margin-bottom: 3px; font-size: var(--inner-font-size); flex-wrap: wrap; gap: 4px; }
+        .course-item .info { flex: 1; margin-right: 6px; }
+        .course-item .actions { display: flex; gap: 4px; }
+        .course-item .edit-btn { background: #f39c12; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-size: var(--inner-font-size); }
+        .course-item .edit-btn:hover { background: #d68910; }
+        .course-item .del-btn { background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-size: var(--inner-font-size); }
+        .course-item .del-btn:hover { background: #b71c1c; }
+        .empty-hint { color: #888; font-size: var(--inner-font-size); text-align: center; padding: 10px 0; }
+
+        .preview-title { font-weight: 700; margin: 12px 0 4px; color: #003366; font-size: var(--inner-font-size); }
+        .empty-timetable-msg { padding: 20px; text-align: center; color: #888; background: #f8faff; border-radius: 8px; font-size: var(--inner-font-size); }
+
+        /* ===== Toast 樣式（新增錯誤類型） ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast-message {
+            background: #1e7e34;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: var(--inner-font-size);
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            opacity: 0;
+            transform: translateX(100px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: auto;
+            white-space: nowrap;
+        }
+        .toast-message.error {
+            background: #d32f2f;
+        }
+        .toast-message.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .toast-message.hide {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+
+        .footer-note { margin-top: 25px; font-size: var(--inner-font-size); color: #666; border-top: 1px solid #ddd; padding-top: 14px; text-align: center; }
+        .footer-note code { background: #e9edf4; padding: 2px 10px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📘 NTUEE 學分管理</h1>
+    <div class="subtitle">畢業 137 學分 · 點擊學期名稱看總課表 · 點擊學分格子編輯課程</div>
+
+    <div class="top-controls">
+        <div class="font-control">
+            <label>🔍 字體大小</label>
+            <input type="range" id="fontSizeSlider" min="12" max="28" value="16" step="1" />
+            <span class="size-display" id="fontSizeDisplay">16</span>
+        </div>
+
+        <div class="auth-control">
+            <span id="user-status" style="font-weight:600;color:#003366;font-size:var(--inner-font-size);">🔒 未登入</span>
+            <button id="login-btn" class="export-btn" style="background:#003366;">🔑 登入</button>
+            <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
+        </div>
+
+        <div class="control-buttons">
+            <button class="export-btn" id="exportDataBtn">📤 匯出</button>
+            <button class="import-btn" id="importDataBtn">📥 匯入</button>
+            <input type="file" id="fileInput" accept=".txt" />
+        </div>
+        
+    </div>
+
+    <div class="credit-summary" id="creditSummary"></div>
+
+    <div class="section-title">📅 各學期學分登記</div>
+    <table class="credit-input-table" id="mainTable">
+        <thead><tr><th style="min-width:80px;">學期</th><th>系訂必修</th><th>共同必修</th><th>通識</th><th>指定選修</th><th>一般選修</th><th>小計</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+        <tfoot>
+            <tr class="tfoot-total">
+                <td>📊 總計 (已修 / 需修)</td>
+                <td id="foot-major">0 / 79</td>
+                <td id="foot-common">0 / 12</td>
+                <td id="foot-general">0 / 12</td>
+                <td id="foot-elective">0 / 18</td>
+                <td id="foot-free">0 / 16</td>
+                <td id="foot-sum"><span class="total-number">0</span> <span class="progress-text">/ 137</span></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- Modal: 學期總課表 -->
+    <div class="modal-overlay" id="semesterModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="semesterModalTitle">📖 學期總課表</h2>
+                <button class="modal-close" id="semesterModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="semesterTimetableContainer" style="margin-top:8px;"></div>
+                <div id="semesterCourseList" class="course-list-box"></div>
+                <div style="text-align:right;margin-top:10px;"><button class="btn-secondary" id="semesterModalCloseBtn">關閉</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: 編輯課程 -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="editModalTitle">編輯課程</h2>
+                <button class="modal-close" id="editModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="font-size:var(--inner-font-size);color:#555;margin-bottom:4px;" id="editModalSubtitle"></div>
+
+                <div class="form-row">
+                    <div class="form-group"><label>課程名稱</label><input type="text" id="courseName" placeholder="e.g. 電子學一" /></div>
+                    <div class="form-group"><label>學分數</label><input type="number" id="courseCredit" placeholder="3" min="0" step="0.5" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>流水號</label><input type="text" id="courseCode" placeholder="e.g. 901 12300" /></div>
+                    <div class="form-group"><label>授課老師</label><input type="text" id="courseTeacher" placeholder="e.g. 張三" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>上課地點</label><input type="text" id="courseLocation" placeholder="e.g. 博理112" /></div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;gap:6px;">
+                        <div style="flex:1;"><label>上課時間</label><input type="text" id="courseTimeText" placeholder="點按鈕設定" readonly style="background:#eee;" /></div>
+                        <button class="btn-secondary" id="openTimePickerBtn" style="margin-bottom:1px;">🕒 設置</button>
+                    </div>
+                </div>
+                <div id="timePickerWrapper" style="display:none;border:2px solid #003366;border-radius:10px;padding:10px;margin:4px 0 8px;background:#f8faff;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <span style="font-weight:700;color:#003366;font-size:var(--inner-font-size);">點選時段 (灰色表示已佔用)</span>
+                        <button class="btn-secondary" id="closeTimePickerBtn">✕ 關閉</button>
+                    </div>
+                    <div id="editTimetableContainer"></div>
+                    <div style="text-align:right;margin-top:4px;">
+                        <button class="btn-secondary" id="clearTimeSelectionBtn">清除選取</button>
+                    </div>
+                </div>
+
+                <button class="btn-primary" id="addCourseBtn" style="width:100%;margin-top:4px;">➕ 加入課程</button>
+
+                <div class="preview-title" style="margin-top:12px;">📋 本學期所有課程 (點擊方塊看詳情)</div>
+                <div class="course-list" id="courseListContainer">
+                    <div class="empty-hint">尚無課程</div>
+                </div>
+                <div id="previewTimetableContainer" style="margin-top:10px;"></div>
+
+                <input type="hidden" id="editIndex" value="-1" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: 課程詳細資訊 -->
+    <div class="modal-overlay" id="infoModal">
+        <div class="modal-box" style="max-width:420px;">
+            <div class="modal-header">
+                <h2 id="infoModalTitle">📄 課程資訊</h2>
+                <button class="modal-close" id="infoModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="infoModalContent" style="font-size:var(--inner-font-size);line-height:2;"></div>
+                <button class="btn-secondary" id="infoModalCloseBtn" style="margin-top:10px;">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        💡 點擊 <strong>學期名稱</strong> 看總課表 · 點擊 <strong>學分數字格子</strong> 編輯課程 · 雙擊頂部規則文字可修改 · 資料自動儲存
+    </div>
+</div>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script type="module">
+    // ======================== Firebase 初始化 ========================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyC9vJK2nUD5kGucr5EBL-9k78g3m1Ks-uM",
+        authDomain: "credit-management-system-462b8.firebaseapp.com",
+        projectId: "credit-management-system-462b8",
+        storageBucket: "credit-management-system-462b8.firebasestorage.app",
+        messagingSenderId: "19793402397",
+        appId: "1:19793402397:web:fe56c946c91be5695ec4f4",
+        measurementId: "G-1N31SEZT0D"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // ======================== 設定 ========================
+    const SEMESTERS = ['大一上', '大一下', '大二上', '大二下', '大三上', '大三下', '大四上', '大四下'];
+    const CATEGORIES = ['系訂必修', '共同必修', '通識', '指定選修', '一般選修'];
+    const CAT_KEY = ['major', 'common', 'general', 'elective', 'free'];
+    const PERIODS = [];
+    for (let i=0; i<=10; i++) PERIODS.push(String(i));
+    PERIODS.push('A','B','C','D');
+    const DAYS = ['一','二','三','四','五','六'];
+    const DAY_MAP = {'一':'1','二':'2','三':'3','四':'4','五':'5','六':'6'};
+
+    // ======================== 安全轉義 ========================
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ======================== Toast ========================
+    function showToast(message, type = 'success', duration = 2000) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast-message ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, duration);
+    }
+
+    // ======================== 時段時間 ========================
+    function getPeriodTime(period) {
+        const times = {
+            '0': '07:10-08:00', '1': '08:10-09:00', '2': '09:10-10:00',
+            '3': '10:20-11:10', '4': '11:20-12:10', '5': '12:20-13:10',
+            '6': '13:20-14:10', '7': '14:20-15:10', '8': '15:30-16:20',
+            '9': '16:30-17:20', '10':'17:30-18:20',
+            'A': '18:25-19:15', 'B': '19:20-20:10', 'C': '20:15-21:05', 'D': '21:10-22:00'
+        };
+        return times[period] || '';
+    }
+
+    // ======================== 其他設定 ========================
+    const TOTAL_REQUIRED = { major:79, common:12, general:12, elective:18, free:16 };
+    const CAT_COLORS = { 'major':'#003366', 'common':'#e67e22', 'general':'#27ae60', 'elective':'#8e44ad', 'free':'#d35400' };
+    const DEFAULT_RULES = {
+        '系訂必修': '核心必修61分+複選必修18分 (數學二選一, 三領域至少一門, 實驗課兩門)',
+        '共同必修': '大一進階語文6分 (上3下3) + 免修英文6分 (體適能1分+運動3分不計入畢業)',
+        '通識': '共15學分，大一下進階語文可抵3分，剩12分需修A1-A5&A8任二，之後可任選非電機系通識',
+        '指定選修': '18學分，可9分修CSIE/NM或18分修EE系課，含複選必修多餘可計入',
+        '一般選修': '16學分，無特別限制'
+    };
+
+    // ======================== 資料層 ========================
+    function getDefaultData() {
+        const data = {};
+        SEMESTERS.forEach(sem => { data[sem] = {}; CAT_KEY.forEach(k => { data[sem][k] = { credits:0, courses:[] }; }); });
+        return data;
+    }
+
+    async function saveData(data) {
+        if (!DATA_REF) {
+            showToast('⚠️ 請先登入', 'error', 2000);
+            return;
+        }
+        try {
+            await setDoc(DATA_REF, data);
+            console.log("✅ 已同步至 Firestore");
+            showToast('✅ 已同步至雲端！', 'success', 2000);
+        } catch (error) {
+            console.error("❌ 同步失敗：", error);
+            showToast('❌ 同步失敗：' + error.message, 'error', 4000);
+        }
+    }
+
+    async function loadData() {
+        if (!DATA_REF) {
+            console.warn("⚠️ 尚未登入，無法載入資料");
+            return getDefaultData();
+        }
+        try {
+            const docSnap = await getDoc(DATA_REF);
+            if (docSnap.exists()) {
+                const cloudData = docSnap.data();
+                console.log("📥 從 Firestore 載入資料");
+                // 確保結構完整
+                SEMESTERS.forEach(sem => {
+                    if (!cloudData[sem]) cloudData[sem] = {};
+                    CAT_KEY.forEach(k => {
+                        if (!cloudData[sem][k]) cloudData[sem][k] = { credits:0, courses:[] };
+                        if (!Array.isArray(cloudData[sem][k].courses)) cloudData[sem][k].courses = [];
+                    });
+                });
+                renderTable(cloudData);
+                renderSummary();
+                localStorage.setItem('ntuee_credit_data', JSON.stringify(cloudData));
+                return cloudData;
+            } else {
+                console.log("📭 Firestore 無資料，嘗試從 localStorage 載入");
+                const localData = localStorage.getItem('ntuee_credit_data');
+                if (localData) {
+                    const parsedData = JSON.parse(localData);
+                    SEMESTERS.forEach(sem => {
+                        if (!parsedData[sem]) parsedData[sem] = {};
+                        CAT_KEY.forEach(k => {
+                            if (!parsedData[sem][k]) parsedData[sem][k] = { credits:0, courses:[] };
+                            if (!Array.isArray(parsedData[sem][k].courses)) parsedData[sem][k].courses = [];
+                        });
+                    });
+                    renderTable(parsedData);
+                    renderSummary();
+                    await saveData(parsedData);
+                    return parsedData;
+                }
+                const defaultData = getDefaultData();
+                renderTable(defaultData);
+                renderSummary();
+                return defaultData;
+            }
+        } catch (error) {
+            console.error("❌ 讀取失敗：", error);
+            showToast('❌ 讀取失敗，請檢查網路', 'error', 4000);
+            const localData = localStorage.getItem('ntuee_credit_data');
+            if (localData) {
+                try {
+                    const parsedData = JSON.parse(localData);
+                    renderTable(parsedData);
+                    renderSummary();
+                    return parsedData;
+                } catch(e) {}
+            }
+            const defaultData = getDefaultData();
+            renderTable(defaultData);
+            renderSummary();
+            return defaultData;
+        }
+    }
+
+    function loadRules() {
+        const stored = localStorage.getItem('ntuee_rules');
+        if (stored) { try { return JSON.parse(stored); } catch(e) {} }
+        localStorage.setItem('ntuee_rules', JSON.stringify(DEFAULT_RULES));
+        return {...DEFAULT_RULES};
+    }
+
+    function saveRules(rules) {
+        localStorage.setItem('ntuee_rules', JSON.stringify(rules));
+    }
+
+    function calcCategoryCredits(data, sem, catKey) {
+        const entry = data[sem]?.[catKey];
+        if (!entry) return 0;
+        let sum = 0;
+        (entry.courses || []).forEach(c => { sum += parseFloat(c.credit) || 0; });
+        return sum;
+    }
+
+    // ======================== 字體控制 ========================
+    function initFontControl() {
+        const slider = document.getElementById('fontSizeSlider');
+        const display = document.getElementById('fontSizeDisplay');
+        const root = document.documentElement;
+        const savedSize = localStorage.getItem('ntuee_font_size');
+        if (savedSize) {
+            const size = parseInt(savedSize);
+            if (!isNaN(size) && size >= 12 && size <= 28) {
+                slider.value = size;
+                display.textContent = size;
+                root.style.setProperty('--base-font-size', size + 'px');
+            }
+        }
+        slider.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            display.textContent = val;
+            root.style.setProperty('--base-font-size', val + 'px');
+            localStorage.setItem('ntuee_font_size', val);
+        });
+    }
+
+    // ======================== 時間表渲染 ========================
+    function renderTimetable(containerId, options = {}) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const { mode='view', selected={}, courses=[], sem='', cat='', occupied={} } = options;
+        const table = document.createElement('table');
+        table.className = 'timetable-table';
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const emptyTh = document.createElement('th');
+        emptyTh.textContent = '';
+        headerRow.appendChild(emptyTh);
+        DAYS.forEach(d => { const th = document.createElement('th'); th.textContent = d; headerRow.appendChild(th); });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        PERIODS.forEach(p => {
+            const tr = document.createElement('tr');
+            const tdLabel = document.createElement('td');
+            tdLabel.className = 'period-label';
+            const timeStr = getPeriodTime(p);
+            tdLabel.textContent = p + (timeStr ? '\n' + timeStr : '');
+            tr.appendChild(tdLabel);
+            DAYS.forEach((day, idx) => {
+                const dayKey = String(idx + 1);
+                const td = document.createElement('td');
+                td.className = 'slot';
+                if (mode === 'view') {
+                    const dayCourses = courses.filter(c => {
+                        const sched = c.schedule || {};
+                        return sched[dayKey] && sched[dayKey].includes(p);
+                    });
+                    dayCourses.forEach(c => {
+                        const block = document.createElement('div');
+                        block.className = 'course-block';
+                        block.textContent = c.name || '未命名';
+                        block.dataset.name = c.name || '';
+                        block.dataset.credit = c.credit || 0;
+                        block.dataset.code = c.code || '';
+                        block.dataset.teacher = c.teacher || '';
+                        block.dataset.location = c.location || '';
+                        block.dataset.time = c.time || '';
+                        block.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const info = {
+                                name: this.dataset.name,
+                                credit: this.dataset.credit,
+                                code: this.dataset.code,
+                                teacher: this.dataset.teacher,
+                                location: this.dataset.location,
+                                time: this.dataset.time
+                            };
+                            if (info.name) openInfoModal(info);
+                        });
+                        td.appendChild(block);
+                    });
+                } else {
+                    const isOccupied = occupied[dayKey] && occupied[dayKey].includes(p);
+                    const isSelected = selected[dayKey] && selected[dayKey].includes(p);
+                    td.classList.add('editable');
+                    if (isOccupied) { td.classList.add('occupied'); td.style.cursor = 'not-allowed'; }
+                    else {
+                        if (isSelected) td.classList.add('selected');
+                        td.dataset.day = dayKey;
+                        td.dataset.period = p;
+                        td.addEventListener('click', function() {
+                            if (this.classList.contains('occupied')) return;
+                            this.classList.toggle('selected');
+                            updateTimeTextFromSelection();
+                        });
+                    }
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        container.innerHTML = '';
+        container.appendChild(table);
+    }
+
+    function updateTimeTextFromSelection() {
+        const container = document.getElementById('editTimetableContainer');
+        const selected = container.querySelectorAll('.slot.editable.selected');
+        const times = [];
+        selected.forEach(el => {
+            const day = el.dataset.day;
+            const period = el.dataset.period;
+            if (day && period) times.push(DAYS[parseInt(day)-1] + period);
+        });
+        document.getElementById('courseTimeText').value = times.join(' ');
+    }
+
+    function parseTimeTextToSchedule(text) {
+        const sched = {};
+        if (!text) return sched;
+        const parts = text.trim().split(/\s+/);
+        parts.forEach(part => {
+            const match = part.match(/^([一二三四五六])(\d+|A|B|C|D)$/);
+            if (match) {
+                const dKey = DAY_MAP[match[1]];
+                const period = match[2];
+                if (dKey) {
+                    if (!sched[dKey]) sched[dKey] = [];
+                    if (!sched[dKey].includes(period)) sched[dKey].push(period);
+                }
+            }
+        });
+        return sched;
+    }
+
+    async function getOccupiedSlots(sem) {
+        const data = await loadData();
+        const occupied = {};
+        CAT_KEY.forEach(k => {
+            (data[sem]?.[k]?.courses || []).forEach(c => {
+                const sched = c.schedule || {};
+                Object.keys(sched).forEach(day => {
+                    sched[day].forEach(period => {
+                        if (!occupied[day]) occupied[day] = [];
+                        if (!occupied[day].includes(period)) occupied[day].push(period);
+                    });
+                });
+            });
+        });
+        return occupied;
+    }
+
+    // ======================== 主表格 ========================
+    function refreshAllInputs(data) {
+        SEMESTERS.forEach(sem => {
+            CAT_KEY.forEach(k => {
+                const total = calcCategoryCredits(data, sem, k);
+                data[sem][k].credits = total;
+                const inp = document.querySelector(`input[data-sem="${sem}"][data-cat="${k}"]`);
+                if (inp) inp.value = total > 0 ? total : '';
+            });
+            let sum = 0;
+            CAT_KEY.forEach(k => { sum += data[sem][k].credits || 0; });
+            const sumInp = document.querySelector(`input[data-sem="${sem}"][data-cat="sum"]`);
+            if (sumInp) sumInp.value = sum > 0 ? sum : '';
+        });
+        let tMajor=0, tCommon=0, tGeneral=0, tElective=0, tFree=0;
+        SEMESTERS.forEach(sem => {
+            tMajor += data[sem]?.major?.credits || 0;
+            tCommon += data[sem]?.common?.credits || 0;
+            tGeneral += data[sem]?.general?.credits || 0;
+            tElective += data[sem]?.elective?.credits || 0;
+            tFree += data[sem]?.free?.credits || 0;
+        });
+        const grand = tMajor+tCommon+tGeneral+tElective+tFree;
+        document.getElementById('foot-major').textContent = `${tMajor} / ${TOTAL_REQUIRED.major}`;
+        document.getElementById('foot-common').textContent = `${tCommon} / ${TOTAL_REQUIRED.common}`;
+        document.getElementById('foot-general').textContent = `${tGeneral} / ${TOTAL_REQUIRED.general}`;
+        document.getElementById('foot-elective').textContent = `${tElective} / ${TOTAL_REQUIRED.elective}`;
+        document.getElementById('foot-free').textContent = `${tFree} / ${TOTAL_REQUIRED.free}`;
+        document.getElementById('foot-sum').innerHTML = `<span class="total-number">${grand}</span> <span class="progress-text">/ 137</span>`;
+        saveData(data);
+    }
+
+    function updateCellHighlight(sem, cat, data) {
+        const courses = data[sem]?.[cat]?.courses || [];
+        const td = document.querySelector(`.clickable-cell[data-sem="${sem}"][data-cat="${cat}"]`);
+        if (td) {
+            if (courses.length > 0) td.classList.add('cell-has-data');
+            else td.classList.remove('cell-has-data');
+            const inp = td.querySelector('input');
+            if (inp) inp.value = data[sem]?.[cat]?.credits || 0 > 0 ? data[sem][cat].credits : '';
+        }
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        SEMESTERS.forEach(sem => {
+            const tr = document.createElement('tr');
+            const tdSem = document.createElement('td');
+            tdSem.className = 'semester-header';
+            tdSem.textContent = sem;
+            tdSem.dataset.sem = sem;
+            tdSem.addEventListener('click', function() { openSemesterModal(this.dataset.sem); });
+            tr.appendChild(tdSem);
+            CAT_KEY.forEach(k => {
+                const td = document.createElement('td');
+                td.className = 'clickable-cell';
+                td.dataset.sem = sem;
+                td.dataset.cat = k;
+                const inp = document.createElement('input');
+                inp.type = 'number';
+                inp.step = '0.5';
+                inp.min = '0';
+                inp.dataset.sem = sem;
+                inp.dataset.cat = k;
+                inp.readOnly = true;
+                inp.value = data[sem]?.[k]?.credits || 0 > 0 ? data[sem][k].credits : '';
+                td.appendChild(inp);
+                if ((data[sem]?.[k]?.courses || []).length > 0) td.classList.add('cell-has-data');
+                td.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'INPUT') return;
+                    openEditModal(this.dataset.sem, this.dataset.cat, -1);
+                });
+                tr.appendChild(td);
+            });
+            const tdSum = document.createElement('td');
+            const inpSum = document.createElement('input');
+            inpSum.type = 'number';
+            inpSum.step = '0.5';
+            inpSum.min = '0';
+            inpSum.dataset.sem = sem;
+            inpSum.dataset.cat = 'sum';
+            inpSum.readOnly = true;
+            let sum = 0;
+            CAT_KEY.forEach(k => { sum += data[sem][k].credits || 0; });
+            inpSum.value = sum > 0 ? sum : '';
+            tdSum.appendChild(inpSum);
+            tr.appendChild(tdSum);
+            tbody.appendChild(tr);
+        });
+        refreshAllInputs(data);
+    }
+
+    // ======================== 匯入與匯出 ========================
+    async function exportData() {
+        const data = await loadData();
+        let lines = [];
+        lines.push('=== NTUEE 學分管理系統 課程資料匯出 ===');
+        lines.push('匯出時間: ' + new Date().toLocaleString());
+        lines.push('');
+        SEMESTERS.forEach(sem => {
+            let hasCourses = false;
+            CAT_KEY.forEach((k, idx) => {
+                const courses = data[sem]?.[k]?.courses || [];
+                if (courses.length > 0) {
+                    if (!hasCourses) { lines.push(`【${sem}】`); hasCourses = true; }
+                    const catName = CATEGORIES[idx];
+                    courses.forEach(c => {
+                        const name = c.name || '未命名';
+                        const credit = c.credit || 0;
+                        const teacher = c.teacher || '';
+                        const location = c.location || '';
+                        const time = c.time || '';
+                        lines.push(`  ${catName} | ${name} | ${credit}學分 | ${teacher} | ${time} | ${location}`);
+                    });
+                }
+            });
+            if (hasCourses) lines.push('');
+        });
+        if (lines.length <= 3) lines.push('（無任何課程資料）');
+        const content = lines.join('\n');
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `課程資料_${new Date().toISOString().slice(0,10)}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
+
+    function importData(file) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const content = e.target.result;
+            try {
+                const newData = parseImportData(content);
+                await saveData(newData);
+                renderTable(newData);
+                renderSummary();
+                closeEditModal();
+                const totalCourses = countTotalCourses(newData);
+                showToast(`✅ 匯入成功！共匯入 ${totalCourses} 門課程。`, 'success', 3000);
+            } catch (err) {
+                showToast('❌ 匯入失敗：' + err.message, 'error', 4000);
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    function countTotalCourses(data) {
+        let count = 0;
+        SEMESTERS.forEach(sem => {
+            CAT_KEY.forEach(k => {
+                count += (data[sem]?.[k]?.courses || []).length;
+            });
+        });
+        return count;
+    }
+
+    function parseImportData(text) {
+        const lines = text.split(/\r?\n/);
+        const data = getDefaultData();
+        let currentSem = null;
+        let courseCount = 0;
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (line === '') continue;
+            if (line.startsWith('===') || line.startsWith('匯出時間')) continue;
+            const semMatch = line.match(/^【(.+?)】$/);
+            if (semMatch) {
+                const semName = semMatch[1];
+                if (SEMESTERS.includes(semName)) {
+                    currentSem = semName;
+                    continue;
+                } else {
+                    throw new Error(`未知的學期名稱: ${semName}`);
+                }
+            }
+            if (!currentSem) continue;
+            const parts = line.split('|').map(s => s.trim());
+            if (parts.length >= 6) {
+                const catName = parts[0];
+                const catIdx = CATEGORIES.indexOf(catName);
+                if (catIdx === -1) continue;
+                const catKey = CAT_KEY[catIdx];
+                const courseName = parts[1] || '未命名';
+                const creditStr = parts[2] || '0學分';
+                const teacher = parts[3] || '';
+                const time = parts[4] || '';
+                const location = parts[5] || '';
+                const creditNum = parseFloat(creditStr.replace('學分', '').trim());
+                if (isNaN(creditNum)) {
+                    throw new Error(`無效的學分數: ${creditStr} (課程: ${courseName})`);
+                }
+                const course = {
+                    name: courseName,
+                    credit: creditNum,
+                    code: '',
+                    teacher: teacher,
+                    location: location,
+                    time: time,
+                    schedule: parseTimeTextToSchedule(time)
+                };
+                if (!data[currentSem]) data[currentSem] = {};
+                if (!data[currentSem][catKey]) data[currentSem][catKey] = { credits:0, courses:[] };
+                data[currentSem][catKey].courses.push(course);
+                courseCount++;
+            }
+        }
+        if (courseCount === 0) {
+            throw new Error('找不到任何課程資料，請確認檔案格式是否包含「類別 | 課程名稱 | 學分 | 老師 | 時間 | 地點」。');
+        }
+        SEMESTERS.forEach(sem => {
+            CAT_KEY.forEach(k => {
+                if (data[sem] && data[sem][k]) {
+                    data[sem][k].credits = calcCategoryCredits(data, sem, k);
+                }
+            });
+        });
+        return data;
+    }
+
+    // ======================== 頂部卡片 ========================
+    function renderSummary() {
+        const container = document.getElementById('creditSummary');
+        const rules = loadRules();
+        const items = [
+            { key:'系訂必修', label:'系訂必修', value:'79', rule: rules['系訂必修'] },
+            { key:'共同必修', label:'共同必修', value:'12', rule: rules['共同必修'] },
+            { key:'通識', label:'通識', value:'12', rule: rules['通識'] },
+            { key:'指定選修', label:'指定選修', value:'18', rule: rules['指定選修'] },
+            { key:'一般選修', label:'一般選修', value:'16', rule: rules['一般選修'] },
+            { key:'畢業', label:'🎯 畢業', value:'137', total:true }
+        ];
+
+        container.innerHTML = items.map(item => {
+            let html = `<div class="credit-item ${item.total ? 'total-credit' : ''}" data-key="${item.key}">`;
+            html += `<div class="label">${item.label}</div>`;
+            html += `<div class="value">${item.value}</div>`;
+            if (!item.total) {
+                html += `<div class="rule-text" contenteditable="false" data-key="${item.key}">${escapeHtml(item.rule || '點兩下編輯')}</div>`;
+                html += `<button class="toggle-btn" data-key="${item.key}">▾</button>`;
+            }
+            html += `</div>`;
+            return html;
+        }).join('');
+
+        container.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const parent = this.closest('.credit-item');
+                parent.classList.toggle('expanded');
+            });
+        });
+
+        container.querySelectorAll('.rule-text').forEach(el => {
+            el.addEventListener('dblclick', function() {
+                this.contentEditable = 'true';
+                this.focus();
+            });
+            el.addEventListener('blur', function() {
+                this.contentEditable = 'false';
+                const key = this.dataset.key;
+                const rules = loadRules();
+                rules[key] = this.textContent.trim();
+                saveRules(rules);
+            });
+        });
+
+        container.querySelectorAll('.credit-item:not(.total-credit)').forEach(item => {
+            item.classList.remove('expanded');
+        });
+    }
+
+    // ======================== Modal: 學期總課表 ========================
+    async function openSemesterModal(sem) {
+        const data = await loadData();
+        const allCourses = [];
+        CAT_KEY.forEach(k => {
+            (data[sem]?.[k]?.courses || []).forEach(c => {
+                allCourses.push({ ...c, _cat: k });
+            });
+        });
+        document.getElementById('semesterModalTitle').textContent = `📖 ${sem} 總課表 (共 ${allCourses.length} 門課)`;
+        const container = document.getElementById('semesterTimetableContainer');
+        if (allCourses.length === 0) {
+            container.innerHTML = `<div class="empty-timetable-msg">📭 此學期尚未安排任何課程</div>`;
+        } else {
+            renderTimetable('semesterTimetableContainer', { mode: 'view', courses: allCourses, sem: sem, cat: 'all' });
+        }
+        const listContainer = document.getElementById('semesterCourseList');
+        if (allCourses.length === 0) {
+            listContainer.innerHTML = '<h3>📋 課程清單</h3><p style="color:#888;">尚無課程</p>';
+        } else {
+            let listHtml = '<h3>📋 課程清單</h3><ul>';
+            allCourses.forEach(c => {
+                const catKey = c._cat || 'free';
+                const color = CAT_COLORS[catKey] || '#888';
+                const catIdx = CAT_KEY.indexOf(catKey);
+                const catName = catIdx !== -1 ? CATEGORIES[catIdx] : '';
+                listHtml += `<li style="border-left-color: ${color}; background: ${color}22;">`;
+                listHtml += `<span class="cname">${escapeHtml(c.name || '未命名')}</span>`;
+                listHtml += `<span class="cinfo">${escapeHtml(c.teacher || '')} ${c.time ? '· '+escapeHtml(c.time) : ''}`;
+                if (catName) listHtml += ` · ${escapeHtml(catName)}`;
+                listHtml += `</span></li>`;
+            });
+            listHtml += '</ul>';
+            listContainer.innerHTML = listHtml;
+        }
+        document.getElementById('semesterModal').classList.add('active');
+    }
+
+    // ======================== Modal: 編輯課程 ========================
+    let currentSem = '', currentCat = '';
+    let editIndex = -1;
+
+    async function openEditModal(sem, cat, idx) {
+        currentSem = sem; currentCat = cat; editIndex = idx;
+        const catIdx = CAT_KEY.indexOf(cat);
+        const mode = idx === -1 ? '新增' : '編輯';
+        document.getElementById('editModalTitle').textContent = `📖 ${sem} · ${CATEGORIES[catIdx]} (${mode})`;
+        document.getElementById('editModalSubtitle').textContent = mode === '新增' ? '輸入新課程資訊' : '修改課程資訊';
+
+        document.getElementById('courseName').value = '';
+        document.getElementById('courseCredit').value = '';
+        document.getElementById('courseCode').value = '';
+        document.getElementById('courseTeacher').value = '';
+        document.getElementById('courseLocation').value = '';
+        document.getElementById('courseTimeText').value = '';
+        document.getElementById('timePickerWrapper').style.display = 'none';
+        document.getElementById('editIndex').value = idx;
+
+        if (idx !== -1) {
+            const data = await loadData();
+            const course = data[sem]?.[cat]?.courses?.[idx];
+            if (course) {
+                document.getElementById('courseName').value = course.name || '';
+                document.getElementById('courseCredit').value = course.credit || '';
+                document.getElementById('courseCode').value = course.code || '';
+                document.getElementById('courseTeacher').value = course.teacher || '';
+                document.getElementById('courseLocation').value = course.location || '';
+                document.getElementById('courseTimeText').value = course.time || '';
+            }
+        }
+
+        updateAddButtonText();
+
+        const occupied = await getOccupiedSlots(sem);
+        const timeText = document.getElementById('courseTimeText').value;
+        const selected = parseTimeTextToSchedule(timeText);
+        renderTimetable('editTimetableContainer', { mode: 'edit', selected: selected, occupied: occupied });
+        renderPreviewTimetable();
+        renderCourseList();
+
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function updateAddButtonText() {
+        const btn = document.getElementById('addCourseBtn');
+        const idx = parseInt(document.getElementById('editIndex').value);
+        if (idx >= 0) {
+            btn.textContent = '✏️ 確定更改';
+        } else {
+            btn.textContent = '➕ 加入課程';
+        }
+    }
+
+    function renderPreviewTimetable() {
+        const localData = localStorage.getItem('ntuee_credit_data');
+        let dataObj = {};
+        if (localData) {
+            try { dataObj = JSON.parse(localData); } catch(e) {}
+        }
+        const allCourses = [];
+        CAT_KEY.forEach(k => {
+            (dataObj[currentSem]?.[k]?.courses || []).forEach(c => {
+                allCourses.push({ ...c, _sem: currentSem, _cat: k });
+            });
+        });
+        const container = document.getElementById('previewTimetableContainer');
+        if (allCourses.length === 0) {
+            container.innerHTML = `<div class="empty-timetable-msg">📭 此學期尚無課程</div>`;
+        } else {
+            renderTimetable('previewTimetableContainer', { mode: 'view', courses: allCourses, sem: currentSem, cat: 'all' });
+        }
+    }
+
+    function renderCourseList() {
+        const container = document.getElementById('courseListContainer');
+        const localData = localStorage.getItem('ntuee_credit_data');
+        let data = {};
+        if (localData) {
+            try { data = JSON.parse(localData); } catch(e) {}
+        }
+        const courses = data[currentSem]?.[currentCat]?.courses || [];
+        if (courses.length === 0) {
+            container.innerHTML = '<div class="empty-hint">尚無課程</div>';
+            return;
+        }
+        let html = '';
+        courses.forEach((c, idx) => {
+            html += `
+                <div class="course-item" data-idx="${idx}">
+                    <span class="info"><strong>${escapeHtml(c.name || '未命名')}</strong> (${escapeHtml(c.credit || 0)}學分) ${escapeHtml(c.teacher ? '· '+c.teacher : '')} ${escapeHtml(c.location ? '· '+c.location : '')} ${escapeHtml(c.time ? '· '+c.time : '')}</span>
+                    <div class="actions">
+                        <button class="edit-btn" data-idx="${idx}">✏️ 編輯</button>
+                        <button class="del-btn" data-idx="${idx}">刪除</button>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        container.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const idx = parseInt(this.dataset.idx);
+                openEditModal(currentSem, currentCat, idx);
+            });
+        });
+        container.querySelectorAll('.del-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const idx = parseInt(this.dataset.idx);
+                const data = await loadData();
+                if (data[currentSem] && data[currentSem][currentCat]) {
+                    data[currentSem][currentCat].courses.splice(idx, 1);
+                    data[currentSem][currentCat].credits = calcCategoryCredits(data, currentSem, currentCat);
+                    await saveData(data);
+                    refreshAllInputs(data);
+                    renderCourseList();
+                    renderPreviewTimetable();
+                    updateCellHighlight(currentSem, currentCat, data);
+                    const occupied = await getOccupiedSlots(currentSem);
+                    renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: occupied });
+                    if (data[currentSem][currentCat].courses.length === 0) {
+                        document.getElementById('editIndex').value = '-1';
+                        updateAddButtonText();
+                    }
+                    showToast('🗑️ 已刪除課程！', 'success', 2000);
+                }
+            });
+        });
+    }
+
+    async function saveCourseFromForm() {
+        const name = document.getElementById('courseName').value.trim();
+        const credit = parseFloat(document.getElementById('courseCredit').value) || 0;
+        const code = document.getElementById('courseCode').value.trim();
+        const teacher = document.getElementById('courseTeacher').value.trim();
+        const location = document.getElementById('courseLocation').value.trim();
+        const timeText = document.getElementById('courseTimeText').value.trim();
+        if (!name) { showToast('⚠️ 請輸入課程名稱', 'error', 2000); return; }
+
+        const data = await loadData();
+        if (!data[currentSem]) data[currentSem] = {};
+        if (!data[currentSem][currentCat]) data[currentSem][currentCat] = { credits:0, courses:[] };
+
+        const schedule = parseTimeTextToSchedule(timeText);
+        const courseData = { name, credit, code, teacher, location, time: timeText, schedule };
+
+        const idx = parseInt(document.getElementById('editIndex').value);
+        let isUpdate = false;
+        if (idx >= 0 && idx < data[currentSem][currentCat].courses.length) {
+            data[currentSem][currentCat].courses[idx] = courseData;
+            isUpdate = true;
+        } else {
+            data[currentSem][currentCat].courses.push(courseData);
+            isUpdate = false;
+        }
+        data[currentSem][currentCat].credits = calcCategoryCredits(data, currentSem, currentCat);
+        await saveData(data);
+        refreshAllInputs(data);
+        renderCourseList();
+        renderPreviewTimetable();
+        updateCellHighlight(currentSem, currentCat, data);
+
+        document.getElementById('courseName').value = '';
+        document.getElementById('courseCredit').value = '';
+        document.getElementById('courseCode').value = '';
+        document.getElementById('courseTeacher').value = '';
+        document.getElementById('courseLocation').value = '';
+        document.getElementById('courseTimeText').value = '';
+        document.getElementById('timePickerWrapper').style.display = 'none';
+        document.getElementById('editIndex').value = '-1';
+        updateAddButtonText();
+
+        showToast(isUpdate ? '✅ 已更新課程！' : '✅ 已加入課程！', 'success', 2000);
+
+        const occupied = await getOccupiedSlots(currentSem);
+        renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: occupied });
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    // ======================== Modal: 課程詳細資訊 ========================
+    function openInfoModal(course) {
+        document.getElementById('infoModalTitle').textContent = `📄 ${escapeHtml(course.name || '課程')}`;
+        document.getElementById('infoModalContent').innerHTML = `
+            <div><strong>課程名稱：</strong>${escapeHtml(course.name || '-')}</div>
+            <div><strong>學分數：</strong>${escapeHtml(course.credit || 0)}</div>
+            <div><strong>流水號：</strong>${escapeHtml(course.code || '-')}</div>
+            <div><strong>授課老師：</strong>${escapeHtml(course.teacher || '-')}</div>
+            <div><strong>上課地點：</strong>${escapeHtml(course.location || '-')}</div>
+            <div><strong>上課時間：</strong>${escapeHtml(course.time || '-')}</div>
+        `;
+        document.getElementById('infoModal').classList.add('active');
+    }
+
+    // ======================== 登入/登出 UI ========================
+    function updateAuthUI(user) {
+        const statusEl = document.getElementById('user-status');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        if (user) {
+            statusEl.textContent = `✅ 已登入：${user.email}`;
+            loginBtn.style.display = 'none';
+            logoutBtn.style.display = 'inline-block';
+            document.querySelectorAll('.clickable-cell').forEach(el => el.style.pointerEvents = 'auto');
+        } else {
+            statusEl.textContent = '🔒 未登入（請登入以編輯）';
+            loginBtn.style.display = 'inline-block';
+            logoutBtn.style.display = 'none';
+            document.querySelectorAll('.clickable-cell').forEach(el => el.style.pointerEvents = 'none');
+            document.getElementById('tableBody').innerHTML = '';
+            document.getElementById('foot-major').textContent = '0 / 79';
+            document.getElementById('foot-common').textContent = '0 / 12';
+            document.getElementById('foot-general').textContent = '0 / 12';
+            document.getElementById('foot-elective').textContent = '0 / 18';
+            document.getElementById('foot-free').textContent = '0 / 16';
+            document.getElementById('foot-sum').innerHTML = '<span class="total-number">0</span> <span class="progress-text">/ 137</span>';
+        }
+    }
+
+    // ======================== 初始化 ========================
+    function init() {
+        loadRules();
+
+        renderSummary();
+        renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: {} });
+        document.getElementById('previewTimetableContainer').innerHTML = `<div class="empty-timetable-msg">📭 此學期尚無課程</div>`;
+
+        initFontControl();
+
+        // 監聽登入狀態
+        onAuthStateChanged(auth, async (user) => {
+            updateAuthUI(user);
+            if (user) {
+                currentUserId = user.uid;
+                DATA_REF = doc(db, "users", currentUserId, "data", "timetable");
+
+                // 監聽 Firestore 即時更新
+                onSnapshot(DATA_REF, (doc) => {
+                    if (doc.exists()) {
+                        const cloudData = doc.data();
+                        console.log("🔄 即時更新：資料已變更！");
+                        renderTable(cloudData);
+                        renderSummary();
+                        localStorage.setItem('ntuee_credit_data', JSON.stringify(cloudData));
+                    }
+                });
+
+                // 載入資料
+                await loadData();
+                showToast(`✅ 歡迎回來，${user.displayName || user.email}！`, 'success', 2000);
+                console.log(`✅ 已登入：${user.email}，資料已載入`);
+            } else {
+                currentUserId = null;
+                DATA_REF = null;
+                document.getElementById('tableBody').innerHTML = '';
+                document.getElementById('foot-major').textContent = '0 / 79';
+                document.getElementById('foot-common').textContent = '0 / 12';
+                document.getElementById('foot-general').textContent = '0 / 12';
+                document.getElementById('foot-elective').textContent = '0 / 18';
+                document.getElementById('foot-free').textContent = '0 / 16';
+                document.getElementById('foot-sum').innerHTML = '<span class="total-number">0</span> <span class="progress-text">/ 137</span>';
+                console.log("🔒 已登出");
+            }
+        });
+
+        // ---- 登入按鈕（已加入成功回調） ----
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    // ✅ 登入成功（但實際上 onAuthStateChanged 會接手，這裡可選）
+                    console.log('✅ 登入成功：', result.user.email);
+                })
+                .catch((error) => {
+                    console.error('❌ 登入失敗：', error);
+                    showToast('❌ 登入失敗：' + error.message, 'error', 4000);
+                });
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                showToast('✅ 已登出', 'success', 2000);
+            }).catch((error) => {
+                showToast('❌ 登出失敗：' + error.message, 'error', 4000);
+            });
+        });
+
+        // ---- 其他事件綁定 ----
+        document.getElementById('exportDataBtn').addEventListener('click', exportData);
+        document.getElementById('importDataBtn').addEventListener('click', function() {
+            document.getElementById('fileInput').click();
+        });
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (this.files && this.files.length > 0) {
+                const file = this.files[0];
+                if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+                    importData(file);
+                } else {
+                    showToast('⚠️ 請選擇 .txt 文字檔案', 'error', 2000);
+                }
+                this.value = '';
+            }
+        });
+
+        document.getElementById('semesterModalClose').addEventListener('click', ()=>document.getElementById('semesterModal').classList.remove('active'));
+        document.getElementById('semesterModalCloseBtn').addEventListener('click', ()=>document.getElementById('semesterModal').classList.remove('active'));
+        document.getElementById('semesterModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('active'); });
+
+        document.getElementById('editModalClose').addEventListener('click', closeEditModal);
+        document.getElementById('editModal').addEventListener('click', function(e){ if(e.target===this) closeEditModal(); });
+
+        document.getElementById('openTimePickerBtn').addEventListener('click', async function() {
+            const wrapper = document.getElementById('timePickerWrapper');
+            if (wrapper.style.display === 'none') {
+                wrapper.style.display = 'block';
+                const timeText = document.getElementById('courseTimeText').value;
+                const selected = parseTimeTextToSchedule(timeText);
+                const occupied = await getOccupiedSlots(currentSem);
+                renderTimetable('editTimetableContainer', { mode: 'edit', selected: selected, occupied: occupied });
+            } else {
+                wrapper.style.display = 'none';
+            }
+        });
+        document.getElementById('closeTimePickerBtn').addEventListener('click', function() {
+            document.getElementById('timePickerWrapper').style.display = 'none';
+        });
+        document.getElementById('clearTimeSelectionBtn').addEventListener('click', function() {
+            document.getElementById('courseTimeText').value = '';
+            renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: {} });
+            document.getElementById('timePickerWrapper').style.display = 'none';
+        });
+
+        document.getElementById('addCourseBtn').addEventListener('click', saveCourseFromForm);
+        document.getElementById('courseName').addEventListener('keypress', function(e){ if(e.key==='Enter') saveCourseFromForm(); });
+
+        document.getElementById('infoModalClose').addEventListener('click', ()=>document.getElementById('infoModal').classList.remove('active'));
+        document.getElementById('infoModalCloseBtn').addEventListener('click', ()=>document.getElementById('infoModal').classList.remove('active'));
+        document.getElementById('infoModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('active'); });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+</script>
+</body>
+</html>
