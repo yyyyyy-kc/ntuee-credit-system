@@ -455,6 +455,8 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    let currentUserId = null;
+    let DATA_REF = null;
     const db = getFirestore(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
