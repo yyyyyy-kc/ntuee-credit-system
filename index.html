@@ -379,57 +379,55 @@
     <div class="subtitle">畢業 137 學分 · 點擊學期名稱看總課表 · 點擊學分格子編輯課程</div>
 
     <div class="top-controls">
+    <!-- 字體大小控制 -->
         <div class="font-control">
             <label>🔍 字體大小</label>
             <input type="range" id="fontSizeSlider" min="12" max="28" value="16" step="1" />
             <span class="size-display" id="fontSizeDisplay">16</span>
         </div>
 
-        <!-- ===== 排列四個按鈕 ===== -->
+    <!-- 登入狀態 -->
+        <div class="auth-status">
+            <span id="user-status" style="font-weight:600;color:#003366;font-size:var(--inner-font-size);">🔒 未登入</span>
+        </div>
+
+    <!-- 四個按鈕群組（手機 2x2） -->
         <div class="button-group">
-                <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
-                <button id="showEmailLoginBtn" class="export-btn" style="background:#8e44ad;">📧 一般登入</button>
-                <button class="export-btn" id="exportDataBtn">📤 匯出</button>
-                <button class="import-btn" id="importDataBtn">📥 匯入</button>
-                <input type="file" id="fileInput" accept=".txt" />
-            </div>
-
-            <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
-        </div>
-
-
-            <!-- ===== Modal: 一般登入（Email/密碼） ===== -->
-            <div class="modal-overlay" id="emailLoginModal">
-                <div class="modal-box" style="max-width:400px;">
-                    <div class="modal-header">
-                        <h2>📧 一般登入</h2>
-                        <button class="modal-close" id="emailLoginModalClose">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div style="margin-bottom:12px;">
-                            <label style="display:block;font-weight:600;font-size:var(--inner-font-size);">電子郵件</label>
-                            <input type="email" id="emailInput" placeholder="your@email.com" style="width:100%;padding:8px;border:1px solid #b0c4de;border-radius:6px;font-size:var(--inner-font-size);">
-                        </div>
-                        <div style="margin-bottom:16px;">
-                            <label style="display:block;font-weight:600;font-size:var(--inner-font-size);">密碼</label>
-                            <input type="password" id="passwordInput" placeholder="至少6個字元" style="width:100%;padding:8px;border:1px solid #b0c4de;border-radius:6px;font-size:var(--inner-font-size);">
-                        </div>
-                        <div style="display:flex;gap:10px;">
-                            <button id="signInBtn" class="btn-primary" style="flex:1;">登入</button>
-                            <button id="signUpBtn" class="btn-secondary" style="flex:1;background:#8e44ad;">註冊</button>
-                        </div>
-                        <div id="emailLoginMessage" style="margin-top:10px;font-size:var(--inner-font-size);color:#555;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="control-buttons">
+            <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
+            <button id="showEmailLoginBtn" class="export-btn" style="background:#8e44ad;">📧 一般登入</button>
             <button class="export-btn" id="exportDataBtn">📤 匯出</button>
             <button class="import-btn" id="importDataBtn">📥 匯入</button>
             <input type="file" id="fileInput" accept=".txt" />
         </div>
-        
+
+    <!-- 登出按鈕（獨立） -->
+        <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
+    </div>
+
+<!-- ✅ Modal 移出 top-controls 外面 -->
+<!-- ===== Modal: 一般登入（Email/密碼） ===== -->
+    <div class="modal-overlay" id="emailLoginModal">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header">
+                <h2>📧 一般登入</h2>
+                <button class="modal-close" id="emailLoginModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:12px;">
+                    <label style="display:block;font-weight:600;font-size:var(--inner-font-size);">電子郵件</label>
+                    <input type="email" id="emailInput" placeholder="your@email.com" style="width:100%;padding:8px;border:1px solid #b0c4de;border-radius:6px;font-size:var(--inner-font-size);">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;font-size:var(--inner-font-size);">密碼</label>
+                    <input type="password" id="passwordInput" placeholder="至少6個字元" style="width:100%;padding:8px;border:1px solid #b0c4de;border-radius:6px;font-size:var(--inner-font-size);">
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button id="signInBtn" class="btn-primary" style="flex:1;">登入</button>
+                    <button id="signUpBtn" class="btn-secondary" style="flex:1;background:#8e44ad;">註冊</button>
+                </div>
+                <div id="emailLoginMessage" style="margin-top:10px;font-size:var(--inner-font-size);color:#555;"></div>
+            </div>
+        </div>
     </div>
 
     <div class="credit-summary" id="creditSummary"></div>
