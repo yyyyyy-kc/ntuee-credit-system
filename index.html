@@ -50,15 +50,27 @@
                 width: 100%;
             }
             .button-group .export-btn,
-            .button-group .import-btn {
+            .button-group .import-btn,
+            .button-group .dropdown-wrapper {
                 width: 100%;
                 text-align: center;
                 box-sizing: border-box;
+            }
+            .button-group .dropdown-wrapper {
+                display: flex;
+                flex-direction: column;
             }
             .auth-status {
                 width: 100%;
                 text-align: center;
                 margin-bottom: 4px;
+            }
+            /* 登出按鈕跨兩欄 */
+            .button-group #logout-btn {
+                grid-column: span 2;
+            }
+            .button-group .dropdown-wrapper {
+                grid-column: span 1;  /* 明確指定佔據一格 */
             }
         }
 
@@ -391,8 +403,69 @@
 
         .footer-note { margin-top: 25px; font-size: var(--inner-font-size); color: #666; border-top: 1px solid #ddd; padding-top: 14px; text-align: center; }
         .footer-note code { background: #e9edf4; padding: 2px 10px; border-radius: 6px; }
+
+        /* ===== 導出下拉選單 ===== */
+        .dropdown-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            min-width: 180px;
+            z-index: 100;
+            overflow: hidden;
+            margin-top: 4px;
+            border: 1px solid #e9edf4;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            background: white;
+            text-align: left;
+            font-size: var(--inner-font-size);
+            font-weight: 600;
+            color: #003366;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .dropdown-item:hover {
+            background: #f4f7fc;
+        }
+
+        .dropdown-item:first-child {
+            border-bottom: 1px solid #e9edf4;
+        }
+
+        @media (max-width: 768px) {
+            .dropdown-menu {
+                min-width: 100%;
+                left: 0;
+            }
+            .dropdown-item {
+                padding: 12px 16px;
+                font-size: calc(var(--inner-font-size) * 0.9);
+            }
+        }
     </style>
+
+
 </head>
+
 <body>
 <div class="container">
     <h1>
@@ -415,13 +488,29 @@
         </div>
 
     <!-- 四個按鈕群組（手機 2x2） -->
-        <div class="button-group">
-            <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
-            <button id="showEmailLoginBtn" class="export-btn" style="background:white; color:#003366; border:2px solid #003366; box-shadow: 0 2px 8px rgba(0,51,102,0.15);">📧 一般登入</button>            
-            <button class="export-btn" id="exportDataBtn">📤 匯出</button>
-            <button class="import-btn" id="importDataBtn">📥 匯入</button>
-            <input type="file" id="fileInput" accept=".txt" />
+    <div class="button-group">
+        <!-- Google 登入 -->
+        <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
+    
+        <!-- 一般登入 -->
+        <button id="showEmailLoginBtn" class="export-btn" style="background:white; color:#003366; border:2px solid #003366; box-shadow: 0 2px 8px rgba(0,51,102,0.15);">📧 一般登入</button>
+    
+        <!-- 登出按鈕（預設隱藏，登入後顯示） -->
+        <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
+
+        <!-- 匯出下拉選單 -->
+        <div class="dropdown-wrapper">
+            <button class="export-btn" id="exportDropdownBtn" style="background:#1e7e34; width:100%;">📤 匯出 ▾</button>
+            <div class="dropdown-menu" id="exportDropdownMenu">
+                <button class="dropdown-item" id="exportDataBtn">📄 匯出為文字檔</button>
+                <button class="dropdown-item" id="exportCalendarBtn">📅 匯出為日曆 (.ics)</button>
+            </div>
         </div>
+
+    <!-- 匯入 -->
+    <button class="import-btn" id="importDataBtn">📥 匯入</button>
+    <input type="file" id="fileInput" accept=".txt" />
+</div>
 
     <!-- 登出按鈕（獨立） -->
         <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
@@ -555,10 +644,44 @@
     <div class="footer-note">
         💡 點擊 <strong>學期名稱</strong> 看總課表 · 點擊 <strong>學分數字格子</strong> 編輯課程 · 雙擊頂部規則文字可修改 · 資料自動儲存
     </div>
+
+    <!-- ===== Modal: 匯出日曆設定 ===== -->
+    <div class="modal-overlay" id="exportCalendarModal">
+        <div class="modal-box" style="max-width:420px;">
+            <div class="modal-header">
+                <h2>📅 匯出日曆設定</h2>
+                <button class="modal-close" id="exportCalendarModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:14px;">
+                    <label style="display:block;font-weight:600;font-size:var(--inner-font-size);margin-bottom:4px;">選擇學期</label>
+                    <select id="exportSemesterSelect" style="width:100%;padding:8px;border-radius:6px;border:1px solid #b0c4de;font-size:var(--inner-font-size);">
+                    <!-- 由 JavaScript 動態填入 -->
+                    </select>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="display:block;font-weight:600;font-size:var(--inner-font-size);margin-bottom:4px;">學期起始日（該學期第一週的週一）</label>
+                    <input type="date" id="exportStartDate" style="width:100%;padding:8px;border-radius:6px;border:1px solid #b0c4de;font-size:var(--inner-font-size);">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-weight:600;font-size:var(--inner-font-size);margin-bottom:4px;">學期結束日（最後一週的週日）</label>
+                    <input type="date" id="exportEndDate" style="width:100%;padding:8px;border-radius:6px;border:1px solid #b0c4de;font-size:var(--inner-font-size);">
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button id="exportCalendarConfirmBtn" class="btn-primary" style="flex:1;">📤 匯出</button>
+                    <button id="exportCalendarCancelBtn" class="btn-secondary" style="flex:1;">取消</button>
+                </div>
+                <div id="exportCalendarMessage" style="margin-top:10px;font-size:var(--inner-font-size);color:#555;"></div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Toast 容器 -->
 <div class="toast-container" id="toastContainer"></div>
+
+
 
 <script type="module">
     // ======================== Firebase 初始化 ========================
@@ -678,6 +801,9 @@
         });
         return result.join('，');
     }
+
+
+
     // ======================== 安全轉義 ========================
     function escapeHtml(text) {
         if (!text) return '';
@@ -685,6 +811,7 @@
         div.textContent = text;
         return div.innerHTML;
     }
+
 
     // ======================== Toast ========================
     function showToast(message, type = 'success', duration = 2000) {
@@ -705,6 +832,7 @@
         }, duration);
     }
 
+
     // ======================== 時段時間 ========================
     function getPeriodTime(period) {
         const times = {
@@ -717,6 +845,7 @@
         return times[period] || '';
     }
 
+
     // ======================== 其他設定 ========================
     const TOTAL_REQUIRED = { major:79, common:12, general:12, elective:18, free:16 };
     const CAT_COLORS = { 'major':'#003366', 'common':'#e67e22', 'general':'#27ae60', 'elective':'#8e44ad', 'free':'#d35400' };
@@ -727,6 +856,7 @@
         '指定選修': '18學分，可9分修\n902(CSIE)\n922(CSIE)\n944(NM)\n或18分修EE系課\n902(EE)\n921(EE)\n941(OE)\n942(CommE)\n943(EE)\n945(BEBI)，\n研究項目\nEE4049/901/49550。指定選修是含複選必修的，故複選必修修完了18分後再選再可計入指定選修中',
         '一般選修': '16學分，無特別限制'
     };
+
 
     // ======================== 資料層 ========================
     function getDefaultData() {
@@ -833,6 +963,7 @@
         return sum;
     }
 
+
     // ======================== 字體控制 ========================
     function initFontControl() {
         const slider = document.getElementById('fontSizeSlider');
@@ -854,6 +985,7 @@
             localStorage.setItem('ntuee_font_size', val);
         });
     }
+
 
     // ======================== 時間表渲染 ========================
     function renderTimetable(containerId, options = {}) {
@@ -1146,6 +1278,171 @@
         };
         reader.readAsText(file, 'UTF-8');
     }
+
+    
+    // ======================== 匯出日曆 (.ics) 核心函數（支援學期與日期範圍） ========================
+    async function exportCalendarWithOptions(sem, startDate, endDate) {
+        const data = await loadData();
+        const allCourses = [];
+
+        // 只收集指定學期的課程
+        CAT_KEY.forEach(k => {
+            const courses = data[sem]?.[k]?.courses || [];
+            courses.forEach(c => {
+                if (c.schedule) {
+                    Object.keys(c.schedule).forEach(dayKey => {
+                        const dayNum = parseInt(dayKey);
+                        c.schedule[dayKey].forEach(period => {
+                            allCourses.push({
+                                name: c.name || '未命名',
+                                location: c.location || '',
+                                teacher: c.teacher || '',
+                                day: dayNum,      // 1-6
+                                period: period,
+                                sem: sem,
+                                cat: CATEGORIES[CAT_KEY.indexOf(k)] || ''
+                            });
+                        });
+                    });
+                }
+            });
+        });
+
+        if (allCourses.length === 0) {
+            showToast('⚠️ 此學期沒有任何課程可匯出', 'error', 2000);
+            return;
+        }
+
+        // 將 startDate 調整為該週的星期一（作為第一週起始）
+        const start = new Date(startDate);
+        const dayOfWeek = start.getDay(); // 0=日, 1=一...
+        const diffToMon = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+        const weekStart = new Date(start);
+        weekStart.setDate(weekStart.getDate() - diffToMon);
+
+        // 將 endDate 調整為該週的星期日（作為最後一週結束）
+        const end = new Date(endDate);
+        const endDayOfWeek = end.getDay();
+        const diffToSun = (endDayOfWeek === 0 ? 0 : 7 - endDayOfWeek);
+        const weekEnd = new Date(end);
+        weekEnd.setDate(weekEnd.getDate() + diffToSun);
+
+        // 開始建構 ICS 內容
+        let icsLines = [];
+        icsLines.push('BEGIN:VCALENDAR');
+        icsLines.push('VERSION:2.0');
+        icsLines.push('PRODID:-//NTUEE Credit Management//Course Calendar//EN');
+        icsLines.push('CALSCALE:GREGORIAN');
+        icsLines.push('METHOD:PUBLISH');
+
+        // 為每個課程生成事件
+        allCourses.forEach((course, index) => {
+            // 計算該課程在基準週的日期（weekStart 是週一）
+            const baseDate = new Date(weekStart);
+            // 課程的星期（course.day 1-6 對應 週一至週六）
+            const targetWeekday = course.day; // 1=一, 2=二, ..., 6=六
+            const diffDays = targetWeekday - 1; // 週一為0
+            const eventDate = new Date(baseDate);
+            eventDate.setDate(eventDate.getDate() + diffDays);
+
+            const periodInfo = getPeriodTimes(course.period);
+            if (!periodInfo) return;
+
+            const [startHour, startMin] = periodInfo.start.split(':').map(Number);
+            const [endHour, endMin] = periodInfo.end.split(':').map(Number);
+
+            const dtStart = new Date(eventDate);
+            dtStart.setHours(startHour, startMin, 0);
+            const dtEnd = new Date(eventDate);
+            dtEnd.setHours(endHour, endMin, 0);
+
+            const uid = `course-${index}-${Date.now()}@ntuee-credit`;
+            const summary = escapeIcsText(course.name);
+            const location = escapeIcsText(course.location);
+            let description = `授課老師：${course.teacher || '未指定'}\\n學期：${course.sem}\\n類別：${course.cat}`;
+            description = escapeIcsText(description);
+
+            icsLines.push('BEGIN:VEVENT');
+            icsLines.push(`UID:${uid}`);
+            icsLines.push(`DTSTART:${formatDateForIcs(dtStart)}T${formatTimeForIcs(dtStart)}`);
+            icsLines.push(`DTEND:${formatDateForIcs(dtEnd)}T${formatTimeForIcs(dtEnd)}`);
+            icsLines.push(`SUMMARY:${summary}`);
+            if (location) icsLines.push(`LOCATION:${location}`);
+            icsLines.push(`DESCRIPTION:${description}`);
+            // 每週重複，直到 weekEnd
+            icsLines.push(`RRULE:FREQ=WEEKLY;BYDAY=${['MO','TU','WE','TH','FR','SA'][course.day-1]};UNTIL=${formatDateForIcs(weekEnd)}T235959Z`);
+            icsLines.push('END:VEVENT');
+        });
+
+        icsLines.push('END:VCALENDAR');
+
+        const icsContent = icsLines.join('\r\n');
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `課程日曆_${sem}_${new Date().toISOString().slice(0,10)}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        showToast(`✅ 已匯出 ${allCourses.length} 門課程（${sem}）至日曆檔案`, 'success', 3000);
+    }
+
+    // 輔助函數：轉義 ICS 特殊字元
+    function escapeIcsText(text) {
+        if (!text) return '';
+        return text.replace(/\\/g, '\\\\')
+                   .replace(/,/g, '\\,')
+                   .replace(/;/g, '\\;')
+                   .replace(/\n/g, '\\n');
+    }
+
+    function padNumber(num) {
+        return String(num).padStart(2, '0');
+    }
+
+    function formatDateForIcs(date) {
+        const y = date.getFullYear();
+        const m = padNumber(date.getMonth() + 1);
+        const d = padNumber(date.getDate());
+        return `${y}${m}${d}`;
+    }
+
+    function formatTimeForIcs(date) {
+        const h = padNumber(date.getHours());
+        const min = padNumber(date.getMinutes());
+        const sec = padNumber(date.getSeconds());
+        return `${h}${min}${sec}`;
+    }
+
+    function getPeriodTimes(period) {
+        const times = {
+            '0': { start: '07:10', end: '08:00' },
+            '1': { start: '08:10', end: '09:00' },
+            '2': { start: '09:10', end: '10:00' },
+            '3': { start: '10:20', end: '11:10' },
+            '4': { start: '11:20', end: '12:10' },
+            '5': { start: '12:20', end: '13:10' },
+            '6': { start: '13:20', end: '14:10' },
+            '7': { start: '14:20', end: '15:10' },
+            '8': { start: '15:30', end: '16:20' },
+            '9': { start: '16:30', end: '17:20' },
+            '10': { start: '17:30', end: '18:20' },
+            'A': { start: '18:25', end: '19:15' },
+            'B': { start: '19:20', end: '20:10' },
+            'C': { start: '20:15', end: '21:05' },
+            'D': { start: '21:10', end: '22:00' }
+        };
+        return times[period] || null;
+    }
+
+
+
+
+
+
+
 
     function countTotalCourses(data) {
         let count = 0;
@@ -1512,20 +1809,24 @@
 
     // ======================== 登入/登出 UI ========================
     function updateAuthUI(user) {
-        const statusEl = document.getElementById('user-status');
+         const statusEl = document.getElementById('user-status');
         const loginBtn = document.getElementById('login-btn');
+        const showEmailBtn = document.getElementById('showEmailLoginBtn');
         const logoutBtn = document.getElementById('logout-btn');
 
         if (user) {
             statusEl.textContent = `✅ 已登入：${user.email}`;
             loginBtn.style.display = 'none';
+            showEmailBtn.style.display = 'none';
             logoutBtn.style.display = 'inline-block';
             document.querySelectorAll('.clickable-cell').forEach(el => el.style.pointerEvents = 'auto');
         } else {
             statusEl.textContent = '🔒 未登入（請登入以編輯）';
             loginBtn.style.display = 'inline-block';
+            showEmailBtn.style.display = 'inline-block';
             logoutBtn.style.display = 'none';
             document.querySelectorAll('.clickable-cell').forEach(el => el.style.pointerEvents = 'none');
+            // 清空課表（保留基本結構）
             document.getElementById('tableBody').innerHTML = '';
             document.getElementById('foot-major').textContent = '0 / 79';
             document.getElementById('foot-common').textContent = '0 / 12';
@@ -1718,11 +2019,138 @@
                 msgEl.style.color = '#d32f2f';
             }
         });
-    }
-    //關關emailloginmodal畫面
+
+        // ===== 匯出下拉選單控制 =====
+        function toggleDropdown() {
+            const menu = document.getElementById('exportDropdownMenu');
+            if (menu) {
+                menu.classList.toggle('active');
+            }
+        }
+
+        // 在 init() 中綁定事件
+        document.getElementById('exportDropdownBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        // 點擊其他地方關閉下拉選單
+        document.addEventListener('click', function() {
+            const menu = document.getElementById('exportDropdownMenu');
+            if (menu) {
+                menu.classList.remove('active');
+            }
+        });
+
+        // 點擊選單內部不關閉（避免誤觸）
+        document.getElementById('exportDropdownMenu').addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+
+        // ===== 匯出日曆 Modal 初始化 =====
+        // 填入學期選項
+        const semSelect = document.getElementById('exportSemesterSelect');
+        semSelect.innerHTML = SEMESTERS.map(s => `<option value="${s}">${s}</option>`).join('');
+        // 預設為「大一上」
+        semSelect.value = '大一上';
+
+        // 設定預設日期（以 2026-09-01 為基準，往後推算）
+        function getDefaultStartDate(sem) {
+            // 根據學期名稱設定起始日（可依需求調整）
+            const baseDate = new Date(2026, 8, 1); // 2026-09-01
+            const semIndex = SEMESTERS.indexOf(sem);
+            // 每學期約 4 個月（16 週）
+            const offsetMonths = semIndex * 4;
+            const result = new Date(baseDate);
+            result.setMonth(result.getMonth() + offsetMonths);
+            return result;
+        }
+
+        function updateDefaultDates() {
+            const sem = semSelect.value;
+            const startDate = getDefaultStartDate(sem);
+            const endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + 112); // +16 週
+            document.getElementById('exportStartDate').value = formatDateInput(startDate);
+            document.getElementById('exportEndDate').value = formatDateInput(endDate);
+        }
+
+        function formatDateInput(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // 學期切換時自動更新日期
+        semSelect.addEventListener('change', updateDefaultDates);
+        updateDefaultDates();
+
+        // 開啟 Modal
+        document.getElementById('exportCalendarBtn').addEventListener('click', function() {
+            document.getElementById('exportCalendarModal').classList.add('active');
+            document.getElementById('exportCalendarMessage').textContent = '';
+            // 重置為預設值
+            updateDefaultDates();
+        });
+
+        // 關閉 Modal
+        document.getElementById('exportCalendarModalClose').addEventListener('click', function() {
+            document.getElementById('exportCalendarModal').classList.remove('active');
+        });
+        document.getElementById('exportCalendarCancelBtn').addEventListener('click', function() {
+            document.getElementById('exportCalendarModal').classList.remove('active');
+        });
+        document.getElementById('exportCalendarModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+        // 綁定「確認匯出」按鈕
+        document.getElementById('exportCalendarConfirmBtn').addEventListener('click', async function() {
+            const sem = document.getElementById('exportSemesterSelect').value;
+            const startDate = document.getElementById('exportStartDate').value;
+            const endDate = document.getElementById('exportEndDate').value;
+            const msgEl = document.getElementById('exportCalendarMessage');
+
+            if (!startDate || !endDate) {
+                msgEl.textContent = '⚠️ 請選擇日期範圍';
+                msgEl.style.color = '#d32f2f';
+                return;
+            }
+
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            if (start > end) {
+                msgEl.textContent = '⚠️ 起始日不能晚於結束日';
+                msgEl.style.color = '#d32f2f';
+                return;
+            }
+
+            // 關閉 Modal
+            document.getElementById('exportCalendarModal').classList.remove('active');
+            // 執行匯出
+            await exportCalendarWithOptions(sem, start, end);
+        });
+
+        // 修改下拉選單中「匯出日曆」項目的行為（原本直接呼叫 exportCalendar，現在改為打開 Modal）
+        // 因為我們已經在 HTML 中定義了 id="exportCalendarBtn"，我們可以重新綁定事件
+        document.getElementById('exportCalendarBtn').addEventListener('click', function(e) {
+            e.stopPropagation(); // 避免觸發其他事件
+            document.getElementById('exportCalendarModal').classList.add('active');
+            document.getElementById('exportCalendarMessage').textContent = '';
+            // 重置日期為當前學期的預設值
+            updateDefaultDates();
+        });
         document.getElementById('emailLoginModalClose').addEventListener('click', function() {
             document.getElementById('emailLoginModal').classList.remove('active');
         });
+
+
+    }//int的結束符 千萬不要動
+
+    //關關emailloginmodal畫面
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
         } else {
