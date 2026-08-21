@@ -1625,11 +1625,11 @@
         document.getElementById('emailLoginModalClose').addEventListener('click', function() {
             document.getElementById('emailLoginModal').classList.remove('active');
         });
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 </script>
 </body>
