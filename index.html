@@ -67,6 +67,20 @@
         .import-btn:hover { background: #6c3483; }
         #fileInput { display: none; }
 
+        /* ===== 時間表容器橫向滾動（手機友善） ===== */
+        #semesterTimetableContainer,
+        #previewTimetableContainer,
+        #editTimetableContainer {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 8px;
+        }
+
+        .timetable-table {
+            min-width: 600px;      /* 確保表格不會被壓縮得太小，可依需要調整 */
+            width: max-content;    /* 讓表格寬度根據內容自動擴展 */
+        }
+
         /* ===== 頂部卡片（新增三角與摺疊） ===== */
         .credit-summary {
             display: grid;
@@ -322,14 +336,32 @@
         <div class="auth-control">
             <span id="user-status" style="font-weight:600;color:#003366;font-size:var(--inner-font-size);">🔒 未登入</span>
             <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
-             <!-- 新增：Email/密碼登入表單 -->
-            <div id="email-login-section" style="display:inline-block; margin-left:10px;">
-                <input type="email" id="emailInput" placeholder="電子郵件" style="width:150px; padding:4px 8px; border-radius:6px; border:1px solid #b0c4de;">
-                <input type="password" id="passwordInput" placeholder="密碼" style="width:120px; padding:4px 8px; border-radius:6px; border:1px solid #b0c4de;">
-                <button id="signInBtn" class="export-btn" style="background:#1e7e34;">登入</button>
-                <button id="signUpBtn" class="export-btn" style="background:#8e44ad;">註冊</button>
-            </div>
+            <button id="showEmailLoginBtn" class="export-btn" style="background:#8e44ad;">📧 一般登入</button>
             <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
+            <!-- ===== Modal: 一般登入（Email/密碼） ===== -->
+            <div class="modal-overlay" id="emailLoginModal">
+                <div class="modal-box" style="max-width:400px;">
+                    <div class="modal-header">
+                        <h2>📧 一般登入</h2>
+                        <button class="modal-close" id="emailLoginModalClose">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block;font-weight:600;font-size:var(--inner-font-size);">電子郵件</label>
+                            <input type="email" id="emailInput" placeholder="your@email.com" style="width:100%;padding:8px;border:1px solid #b0c4de;border-radius:6px;font-size:var(--inner-font-size);">
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block;font-weight:600;font-size:var(--inner-font-size);">密碼</label>
+                            <input type="password" id="passwordInput" placeholder="至少6個字元" style="width:100%;padding:8px;border:1px solid #b0c4de;border-radius:6px;font-size:var(--inner-font-size);">
+                        </div>
+                        <div style="display:flex;gap:10px;">
+                            <button id="signInBtn" class="btn-primary" style="flex:1;">登入</button>
+                            <button id="signUpBtn" class="btn-secondary" style="flex:1;background:#8e44ad;">註冊</button>
+                        </div>
+                        <div id="emailLoginMessage" style="margin-top:10px;font-size:var(--inner-font-size);color:#555;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="control-buttons">
@@ -478,6 +510,91 @@
     const DAYS = ['一','二','三','四','五','六'];
     const DAY_MAP = {'一':'1','二':'2','三':'3','四':'4','五':'5','六':'6'};
 
+    //=========================課程時間字串格式設置===============
+    function formatTimeString(timeStr) {
+        if (!timeStr) return '';
+        // 解析 "一1 二2 一2 一3" 為 [{day:1, period:'1'}, ...]
+        const dayMap = {'一':1, '二':2, '三':3, '四':4, '五':5, '六':6};
+        const parts = timeStr.trim().split(/\s+/);
+        const entries = [];
+        parts.forEach(part => {
+            const match = part.match(/^([一二三四五六])(\d+|A|B|C|D)$/);
+            if (match) {
+                const day = dayMap[match[1]];
+                const period = match[2];
+                entries.push({ day, period });
+            }
+        });
+        if (entries.length === 0) return timeStr;
+
+    // 按 day 排序，再按 period 排序（數字或字母）
+        entries.sort((a, b) => {
+            if (a.day !== b.day) return a.day - b.day;
+        // 比較 period：數字優先，字母在後
+            const aIsNum = !isNaN(a.period);
+            const bIsNum = !isNaN(b.period);
+            if (aIsNum && bIsNum) return parseInt(a.period) - parseInt(b.period);
+            if (aIsNum) return -1;
+            if (bIsNum) return 1;
+            return a.period.localeCompare(b.period);
+        });
+
+        // 合併同一天的連續節次
+        const dayGroups = {};
+        entries.forEach(entry => {
+            if (!dayGroups[entry.day]) dayGroups[entry.day] = [];
+            dayGroups[entry.day].push(entry.period);
+        });
+
+        const dayNames = ['一','二','三','四','五','六'];
+        const result = [];
+        Object.keys(dayGroups).sort((a,b) => a - b).forEach(day => {
+            const periods = dayGroups[day];
+            // 將 periods 排序（數字升序，字母升序）
+            periods.sort((a, b) => {
+                const aNum = !isNaN(a);
+                const bNum = !isNaN(b);
+                if (aNum && bNum) return parseInt(a) - parseInt(b);
+                if (aNum) return -1;
+                if (bNum) return 1;
+                return a.localeCompare(b);
+            });
+            // 尋找連續區間
+            let ranges = [];
+            let start = periods[0];
+            let end = periods[0];
+            for (let i = 1; i < periods.length; i++) {
+                const prev = periods[i-1];
+                const curr = periods[i];
+                // 判斷是否連續：數字差1，或字母順序差1
+                let isConsecutive = false;
+                if (!isNaN(prev) && !isNaN(curr)) {
+                    isConsecutive = (parseInt(curr) - parseInt(prev) === 1);
+                } else if (isNaN(prev) && isNaN(curr)) {
+                    // 字母連續判斷（A,B,C,D）
+                    const letters = ['A','B','C','D'];
+                    const pIdx = letters.indexOf(prev);
+                    const cIdx = letters.indexOf(curr);
+                    isConsecutive = (cIdx - pIdx === 1);
+                }
+                if (isConsecutive) {
+                    end = curr;
+                } else {
+                    ranges.push({ start, end });
+                    start = curr;
+                    end = curr;
+                }
+            }
+            ranges.push({ start, end });
+        // 轉為字串
+            const rangeStrs = ranges.map(r => {
+                if (r.start === r.end) return r.start;
+                return `${r.start}-${r.end}`;
+            });
+            result.push(dayNames[day-1] + rangeStrs.join(','));
+        });
+        return result.join('，');
+    }
     // ======================== 安全轉義 ========================
     function escapeHtml(text) {
         if (!text) return '';
@@ -535,18 +652,19 @@
         return data;
     }
 
-    async function saveData(data) {
+    async function saveData(data, showToastMsg = true) {
         if (!DATA_REF) {
-            showToast('⚠️ 請先登入', 'error', 2000);
+            if (showToastMsg) showToast('⚠️ 請先登入', 'error', 2000);
             return;
         }
         try {
             await setDoc(DATA_REF, data);
             console.log("✅ 已同步至 Firestore");
-            showToast('✅ 已同步至雲端！', 'success', 2000);
+            if (showToastMsg) showToast('✅ 已同步至雲端！', 'success', 2000);
         } catch (error) {
             console.error("❌ 同步失敗：", error);
-            showToast('❌ 同步失敗：' + error.message, 'error', 4000);
+            if (showToastMsg) showToast('❌ 同步失敗：' + error.message, 'error', 4000);
+            else console.error("❌ 同步失敗（背景）：", error); // 可選擇記錄錯誤
         }
     }
 
@@ -586,7 +704,7 @@
                     });
                     renderTable(parsedData);
                     renderSummary();
-                    await saveData(parsedData);
+                    await saveData(parsedData, false);
                     return parsedData;
                 }
                 const defaultData = getDefaultData();
@@ -811,7 +929,6 @@
         document.getElementById('foot-elective').textContent = `${tElective} / ${TOTAL_REQUIRED.elective}`;
         document.getElementById('foot-free').textContent = `${tFree} / ${TOTAL_REQUIRED.free}`;
         document.getElementById('foot-sum').innerHTML = `<span class="total-number">${grand}</span> <span class="progress-text">/ 137</span>`;
-        saveData(data);
     }
 
     function updateCellHighlight(sem, cat, data) {
@@ -1085,7 +1202,8 @@
                 const catName = catIdx !== -1 ? CATEGORIES[catIdx] : '';
                 listHtml += `<li style="border-left-color: ${color}; background: ${color}22;">`;
                 listHtml += `<span class="cname">${escapeHtml(c.name || '未命名')}</span>`;
-                listHtml += `<span class="cinfo">${escapeHtml(c.teacher || '')} ${c.time ? '· '+escapeHtml(c.time) : ''}`;
+                const displayTime = formatTimeString(c.time);
+                listHtml += `<span class="cinfo">${escapeHtml(c.teacher || '')} ${displayTime ? '· '+escapeHtml(displayTime) : ''}`;
                 if (catName) listHtml += ` · ${escapeHtml(catName)}`;
                 listHtml += `</span></li>`;
             });
@@ -1100,7 +1218,9 @@
     let editIndex = -1;
 
     async function openEditModal(sem, cat, idx) {
-        currentSem = sem; currentCat = cat; editIndex = idx;
+        currentSem = sem;
+        currentCat = cat;
+        editIndex = idx;
         const catIdx = CAT_KEY.indexOf(cat);
         const mode = idx === -1 ? '新增' : '編輯';
         document.getElementById('editModalTitle').textContent = `📖 ${sem} · ${CATEGORIES[catIdx]} (${mode})`;
@@ -1115,9 +1235,11 @@
         document.getElementById('timePickerWrapper').style.display = 'none';
         document.getElementById('editIndex').value = idx;
 
+    // 🔽 載入最新資料
+        const currentData = await loadData();
+
         if (idx !== -1) {
-            const data = await loadData();
-            const course = data[sem]?.[cat]?.courses?.[idx];
+            const course = currentData[sem]?.[cat]?.courses?.[idx];
             if (course) {
                 document.getElementById('courseName').value = course.name || '';
                 document.getElementById('courseCredit').value = course.credit || '';
@@ -1134,8 +1256,10 @@
         const timeText = document.getElementById('courseTimeText').value;
         const selected = parseTimeTextToSchedule(timeText);
         renderTimetable('editTimetableContainer', { mode: 'edit', selected: selected, occupied: occupied });
-        renderPreviewTimetable();
-        renderCourseList();
+    
+    // 🔽 傳入 currentData
+        renderPreviewTimetable(currentData);
+        renderCourseList(currentData);
 
         document.getElementById('editModal').classList.add('active');
     }
@@ -1150,15 +1274,11 @@
         }
     }
 
-    function renderPreviewTimetable() {
-        const localData = localStorage.getItem('ntuee_credit_data');
-        let dataObj = {};
-        if (localData) {
-            try { dataObj = JSON.parse(localData); } catch(e) {}
-        }
+    function renderPreviewTimetable(data) {
+    // 直接使用傳入的 data，不再讀 localStorage
         const allCourses = [];
         CAT_KEY.forEach(k => {
-            (dataObj[currentSem]?.[k]?.courses || []).forEach(c => {
+            (data[currentSem]?.[k]?.courses || []).forEach(c => {
                 allCourses.push({ ...c, _sem: currentSem, _cat: k });
             });
         });
@@ -1170,13 +1290,9 @@
         }
     }
 
-    function renderCourseList() {
+    function renderCourseList(data) {
         const container = document.getElementById('courseListContainer');
-        const localData = localStorage.getItem('ntuee_credit_data');
-        let data = {};
-        if (localData) {
-            try { data = JSON.parse(localData); } catch(e) {}
-        }
+        // 直接使用傳入的 data
         const courses = data[currentSem]?.[currentCat]?.courses || [];
         if (courses.length === 0) {
             container.innerHTML = '<div class="empty-hint">尚無課程</div>';
@@ -1184,23 +1300,26 @@
         }
         let html = '';
         courses.forEach((c, idx) => {
+            const displayTime = formatTimeString(c.time);
             html += `
                 <div class="course-item" data-idx="${idx}">
-                    <span class="info"><strong>${escapeHtml(c.name || '未命名')}</strong> (${escapeHtml(c.credit || 0)}學分) ${escapeHtml(c.teacher ? '· '+c.teacher : '')} ${escapeHtml(c.location ? '· '+c.location : '')} ${escapeHtml(c.time ? '· '+c.time : '')}</span>
+                    <span class="info"><strong>${escapeHtml(c.name || '未命名')}</strong> (${escapeHtml(c.credit || 0)}學分) ${escapeHtml(c.teacher ? '· '+c.teacher : '')} ${escapeHtml(c.location ? '· '+c.location : '')} ${displayTime ? '· '+escapeHtml(displayTime) : ''}</span>
                     <div class="actions">
                         <button class="edit-btn" data-idx="${idx}">✏️ 編輯</button>
                         <button class="del-btn" data-idx="${idx}">刪除</button>
                     </div>
                 </div>
-            `;
+        `   ;
         });
         container.innerHTML = html;
+
         container.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const idx = parseInt(this.dataset.idx);
                 openEditModal(currentSem, currentCat, idx);
             });
         });
+
         container.querySelectorAll('.del-btn').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const idx = parseInt(this.dataset.idx);
@@ -1210,8 +1329,8 @@
                     data[currentSem][currentCat].credits = calcCategoryCredits(data, currentSem, currentCat);
                     await saveData(data);
                     refreshAllInputs(data);
-                    renderCourseList();
-                    renderPreviewTimetable();
+                    renderCourseList(data);
+                    renderPreviewTimetable(data);
                     updateCellHighlight(currentSem, currentCat, data);
                     const occupied = await getOccupiedSlots(currentSem);
                     renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: occupied });
@@ -1252,10 +1371,11 @@
         }
         data[currentSem][currentCat].credits = calcCategoryCredits(data, currentSem, currentCat);
         await saveData(data);
-        refreshAllInputs(data);
-        renderCourseList();
-        renderPreviewTimetable();
-        updateCellHighlight(currentSem, currentCat, data);
+        const updatedData = await loadData();
+        refreshAllInputs(updatedData);
+        renderCourseList(updatedData);
+        renderPreviewTimetable(updatedData);
+        updateCellHighlight(currentSem, currentCat, updatedData);
 
         document.getElementById('courseName').value = '';
         document.getElementById('courseCredit').value = '';
@@ -1280,13 +1400,14 @@
     // ======================== Modal: 課程詳細資訊 ========================
     function openInfoModal(course) {
         document.getElementById('infoModalTitle').textContent = `📄 ${escapeHtml(course.name || '課程')}`;
+        const displayTime = formatTimeString(course.time);
         document.getElementById('infoModalContent').innerHTML = `
             <div><strong>課程名稱：</strong>${escapeHtml(course.name || '-')}</div>
             <div><strong>學分數：</strong>${escapeHtml(course.credit || 0)}</div>
             <div><strong>流水號：</strong>${escapeHtml(course.code || '-')}</div>
             <div><strong>授課老師：</strong>${escapeHtml(course.teacher || '-')}</div>
             <div><strong>上課地點：</strong>${escapeHtml(course.location || '-')}</div>
-            <div><strong>上課時間：</strong>${escapeHtml(course.time || '-')}</div>
+            <div><strong>上課時間：</strong>${escapeHtml(displayTime || '-')}</div>
         `;
         document.getElementById('infoModal').classList.add('active');
     }
@@ -1375,13 +1496,26 @@
                     showToast('❌ 登入失敗：' + error.message, 'error', 4000);
                 });
         });
+        
+        document.getElementById('showEmailLoginBtn').addEventListener('click', function() {
+            document.getElementById('emailLoginModal').classList.remove('active');
+            document.getElementById('emailLoginModal').classList.add('active');
+            // 清空之前的訊息
+            document.getElementById('emailLoginMessage').textContent = '';
+        });
 
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            signOut(auth).then(() => {
-                showToast('✅ 已登出', 'success', 2000);
-            }).catch((error) => {
-                showToast('❌ 登出失敗：' + error.message, 'error', 4000);
-            });
+        document.getElementById('emailLoginModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                signOut(auth).then(() => {
+                    showToast('✅ 已登出', 'success', 2000);
+                }).catch((error) => {
+                    showToast('❌ 登出失敗：' + error.message, 'error', 4000);
+                });
         });
 
         // ---- 其他事件綁定 ----
@@ -1435,51 +1569,68 @@
         document.getElementById('infoModalClose').addEventListener('click', ()=>document.getElementById('infoModal').classList.remove('active'));
         document.getElementById('infoModalCloseBtn').addEventListener('click', ()=>document.getElementById('infoModal').classList.remove('active'));
         document.getElementById('infoModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('active'); });
+            // 註冊
+        document.getElementById('signUpBtn').addEventListener('click', async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value.trim();
+            const msgEl = document.getElementById('emailLoginMessage');
+            if (!email || !password) {
+                msgEl.textContent = '⚠️ 請輸入電子郵件和密碼';
+                msgEl.style.color = '#d32f2f';
+                return;
+            }
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                console.log('✅ 註冊成功！', userCredential.user.email);
+                msgEl.textContent = '✅ 註冊成功！請重新登入。';
+                msgEl.style.color = '#1e7e34';
+                document.getElementById('emailInput').value = '';
+                document.getElementById('passwordInput').value = '';
+                // 可選：自動關閉 Modal
+                // document.getElementById('emailLoginModal').classList.remove('active');
+            } catch (error) {
+                console.error('❌ 註冊失敗：', error);
+                msgEl.textContent = '❌ ' + error.message;
+                msgEl.style.color = '#d32f2f';
+            }
+        });
+
+    // 登入
+        document.getElementById('signInBtn').addEventListener('click', async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value.trim();
+            const msgEl = document.getElementById('emailLoginMessage');
+            if (!email || !password) {
+                msgEl.textContent = '⚠️ 請輸入電子郵件和密碼';
+                msgEl.style.color = '#d32f2f';
+                return;
+            }
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                console.log('✅ 登入成功！', userCredential.user.email);
+                msgEl.textContent = '✅ 登入成功！';
+                msgEl.style.color = '#1e7e34';
+                document.getElementById('emailInput').value = '';
+                document.getElementById('passwordInput').value = '';
+                // 關閉 Modal
+                document.getElementById('emailLoginModal').classList.remove('active');
+            } catch (error) {
+                console.error('❌ 登入失敗：', error);
+                msgEl.textContent = '❌ ' + error.message;
+                msgEl.style.color = '#d32f2f';
+            }
+        });
+
+    //關關emailloginmodal畫面
+        document.getElementById('emailLoginModalClose').addEventListener('click', function() {
+            document.getElementById('emailLoginModal').classList.remove('active');
+        });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     }
-
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-    else init();
-
-    // ====== Email/密碼 註冊與登入 ======
-    document.getElementById('signUpBtn').addEventListener('click', async () => {
-        const email = document.getElementById('emailInput').value.trim();
-        const password = document.getElementById('passwordInput').value.trim();
-        if (!email || !password) {
-            showToast('⚠️ 請輸入電子郵件和密碼', 'error', 2000);
-            return;
-        }
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            console.log('✅ 註冊成功！', userCredential.user.email);
-            showToast('✅ 註冊成功！請重新登入。', 'success', 3000);
-        // 清空輸入框
-            document.getElementById('emailInput').value = '';
-            document.getElementById('passwordInput').value = '';
-        } catch (error) {
-            console.error('❌ 註冊失敗：', error);
-            showToast('❌ 註冊失敗：' + error.message, 'error', 4000);
-        }
-    });
-
-    document.getElementById('signInBtn').addEventListener('click', async () => {
-        const email = document.getElementById('emailInput').value.trim();
-        const password = document.getElementById('passwordInput').value.trim();
-        if (!email || !password) {
-            showToast('⚠️ 請輸入電子郵件和密碼', 'error', 2000);
-            return;
-        }
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            console.log('✅ 登入成功！', userCredential.user.email);
-            showToast('✅ 登入成功！', 'success', 2000);
-            // 清空輸入框
-            document.getElementById('emailInput').value = '';
-            document.getElementById('passwordInput').value = '';
-        } catch (error) {
-            console.error('❌ 登入失敗：', error);
-            showToast('❌ 登入失敗：' + error.message, 'error', 4000);
-        }
-    });
 </script>
 </body>
 </html>
