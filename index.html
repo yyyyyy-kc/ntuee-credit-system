@@ -26,6 +26,42 @@
             border-radius: 12px;
             margin-bottom: 20px;
         }
+        /* 按鈕群組 - 在手機上 2x2 網格 */
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            flex: 1 1 auto;
+        }
+
+        .button-group .export-btn,
+        .button-group .import-btn {
+            flex: 0 1 auto;
+            white-space: nowrap;
+        }
+
+        /* 手機（寬度 ≤ 768px） */
+        @media (max-width: 768px) {
+            .button-group {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                width: 100%;
+            }
+            .button-group .export-btn,
+            .button-group .import-btn {
+                width: 100%;
+                text-align: center;
+                box-sizing: border-box;
+            }
+            .auth-status {
+                width: 100%;
+                text-align: center;
+                margin-bottom: 4px;
+            }
+        }
+
         .font-control {
             display: flex;
             align-items: center;
@@ -230,6 +266,19 @@
             width: auto;
             transition: 0.1s;
         }
+        /* ===== 表格橫向滾動 ===== */
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -4px; /* 可選，讓滾動條貼邊 */
+        }
+
+        .credit-input-table {
+            min-width: 700px;  /* 確保每欄不會縮得太窄，可依需求調整 */
+            width: 100%;
+            border-collapse: collapse;
+        }
+
         .timetable-table .slot .course-block:hover { background: #a8c4f0; border-color: #003366; }
         .timetable-table .slot.editable { background: #f4f7fc; cursor: pointer; border: 1px solid transparent; transition: 0.15s; min-height: calc(var(--base-font-size) * 2.2); }
         .timetable-table .slot.editable:hover { border-color: #003366; }
@@ -323,7 +372,10 @@
 </head>
 <body>
 <div class="container">
-    <h1>📘 NTUEE 學分管理</h1>
+    <h1>
+        <img src="ntu-logo.png" alt="臺大校徽" style="height: 1.5em; vertical-align: middle; margin-right: 6px;">
+        NTUEE 學分管理
+    </h1>
     <div class="subtitle">畢業 137 學分 · 點擊學期名稱看總課表 · 點擊學分格子編輯課程</div>
 
     <div class="top-controls">
@@ -333,11 +385,19 @@
             <span class="size-display" id="fontSizeDisplay">16</span>
         </div>
 
-        <div class="auth-control">
-            <span id="user-status" style="font-weight:600;color:#003366;font-size:var(--inner-font-size);">🔒 未登入</span>
-            <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
-            <button id="showEmailLoginBtn" class="export-btn" style="background:#8e44ad;">📧 一般登入</button>
+        <!-- ===== 排列四個按鈕 ===== -->
+        <div class="button-group">
+                <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
+                <button id="showEmailLoginBtn" class="export-btn" style="background:#8e44ad;">📧 一般登入</button>
+                <button class="export-btn" id="exportDataBtn">📤 匯出</button>
+                <button class="import-btn" id="importDataBtn">📥 匯入</button>
+                <input type="file" id="fileInput" accept=".txt" />
+            </div>
+
             <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
+        </div>
+
+
             <!-- ===== Modal: 一般登入（Email/密碼） ===== -->
             <div class="modal-overlay" id="emailLoginModal">
                 <div class="modal-box" style="max-width:400px;">
@@ -375,21 +435,23 @@
     <div class="credit-summary" id="creditSummary"></div>
 
     <div class="section-title">📅 各學期學分登記</div>
-    <table class="credit-input-table" id="mainTable">
-        <thead><tr><th style="min-width:80px;">學期</th><th>系訂必修</th><th>共同必修</th><th>通識</th><th>指定選修</th><th>一般選修</th><th>小計</th></tr></thead>
-        <tbody id="tableBody"></tbody>
-        <tfoot>
-            <tr class="tfoot-total">
-                <td>📊 總計 (已修 / 需修)</td>
-                <td id="foot-major">0 / 79</td>
-                <td id="foot-common">0 / 12</td>
-                <td id="foot-general">0 / 12</td>
-                <td id="foot-elective">0 / 18</td>
-                <td id="foot-free">0 / 16</td>
-                <td id="foot-sum"><span class="total-number">0</span> <span class="progress-text">/ 137</span></td>
-            </tr>
-        </tfoot>
-    </table>
+    <div class="table-wrapper">
+        <table class="credit-input-table" id="mainTable">
+            <thead><tr><th style="min-width:80px;">學期</th><th>系訂必修</th><th>共同必修</th><th>通識</th><th>指定選修</th><th>一般選修</th><th>小計</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+            <tfoot>
+                <tr class="tfoot-total">
+                    <td>📊 總計 (已修 / 需修)</td>
+                    <td id="foot-major">0 / 79</td>
+                    <td id="foot-common">0 / 12</td>
+                    <td id="foot-general">0 / 12</td>
+                    <td id="foot-elective">0 / 18</td>
+                    <td id="foot-free">0 / 16</td>
+                    <td id="foot-sum"><span class="total-number">0</span> <span class="progress-text">/ 137</span></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 
     <!-- Modal: 學期總課表 -->
     <div class="modal-overlay" id="semesterModal">
@@ -1625,11 +1687,11 @@
         document.getElementById('emailLoginModalClose').addEventListener('click', function() {
             document.getElementById('emailLoginModal').classList.remove('active');
         });
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     }
 </script>
 </body>
