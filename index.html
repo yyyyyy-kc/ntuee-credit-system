@@ -247,24 +247,47 @@
         }
         .timetable-table .slot { position: relative; padding: 2px; }
         .timetable-table .slot .course-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             background: #d4e2fc;
             color: #003366;
             border-radius: 6px;
-            padding: 2px 6px;
-            font-size: var(--inner-font-size);
-            font-weight: 600;
-            cursor: pointer;
-            margin: 1px auto;
+            padding: 4px 6px;
             border: 1px solid #b0c4de;
-            text-align: center;
-            line-height: 1.4;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 120px;
-            display: inline-block;
-            width: auto;
+            cursor: pointer;
             transition: 0.1s;
+            min-height: 40px;        /* 確保高度足夠顯示兩行 */
+            max-width: 200px;
+            width: auto;
+            margin: 1px auto;
+            line-height: 1.2;
+        }
+
+        /* 課程名稱（大字） */
+        .timetable-table .slot .course-block .course-name {
+            font-size: calc(var(--inner-font-size) * 1.0);
+            font-weight: 600;
+            text-align: center;
+            word-break: break-word;
+            width: 100%;
+        }
+
+        /* 上課地點（小字） */
+        .timetable-table .slot .course-block .course-location {
+            font-size: calc(var(--inner-font-size) * 0.7);
+            font-weight: 400;
+            color: #1a4c7a;
+            text-align: center;
+            word-break: break-word;
+            width: 100%;
+            margin-top: 1px;
+        }
+
+        .timetable-table .slot .course-block:hover {
+            background: #a8c4f0;
+            border-color: #003366;
         }
         /* ===== 表格橫向滾動 ===== */
         .table-wrapper {
@@ -867,7 +890,23 @@
                     dayCourses.forEach(c => {
                         const block = document.createElement('div');
                         block.className = 'course-block';
-                        block.textContent = c.name || '未命名';
+        // 改為包含名稱與地點的雙行結構
+                        const block = document.createElement('div');
+                        block.className = 'course-block';
+
+                        // 課程名稱（大字）
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'course-name';
+                        nameSpan.textContent = c.name || '未命名';
+                        block.appendChild(nameSpan);
+
+                        // 上課地點（小字，若有資料才顯示）
+                        if (c.location && c.location.trim() !== '') {
+                            const locSpan = document.createElement('span');
+                            locSpan.className = 'course-location';
+                            locSpan.textContent = c.location;
+                            block.appendChild(locSpan);
+                        }    
                         block.dataset.name = c.name || '';
                         block.dataset.credit = c.credit || 0;
                         block.dataset.code = c.code || '';
