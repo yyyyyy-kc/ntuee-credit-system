@@ -321,7 +321,14 @@
 
         <div class="auth-control">
             <span id="user-status" style="font-weight:600;color:#003366;font-size:var(--inner-font-size);">🔒 未登入</span>
-            <button id="login-btn" class="export-btn" style="background:#003366;">🔑 登入</button>
+            <button id="login-btn" class="export-btn" style="background:#003366;">🔑 Google 登入</button>
+             <!-- 新增：Email/密碼登入表單 -->
+            <div id="email-login-section" style="display:inline-block; margin-left:10px;">
+                <input type="email" id="emailInput" placeholder="電子郵件" style="width:150px; padding:4px 8px; border-radius:6px; border:1px solid #b0c4de;">
+                <input type="password" id="passwordInput" placeholder="密碼" style="width:120px; padding:4px 8px; border-radius:6px; border:1px solid #b0c4de;">
+                <button id="signInBtn" class="export-btn" style="background:#1e7e34;">登入</button>
+                <button id="signUpBtn" class="export-btn" style="background:#8e44ad;">註冊</button>
+            </div>
             <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
         </div>
 
@@ -442,7 +449,7 @@
     // ======================== Firebase 初始化 ========================
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC9vJK2nUD5kGucr5EBL-9k78g3m1Ks-uM",
@@ -1432,6 +1439,47 @@
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
+
+    // ====== Email/密碼 註冊與登入 ======
+    document.getElementById('signUpBtn').addEventListener('click', async () => {
+        const email = document.getElementById('emailInput').value.trim();
+        const password = document.getElementById('passwordInput').value.trim();
+        if (!email || !password) {
+            showToast('⚠️ 請輸入電子郵件和密碼', 'error', 2000);
+            return;
+        }
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            console.log('✅ 註冊成功！', userCredential.user.email);
+            showToast('✅ 註冊成功！請重新登入。', 'success', 3000);
+        // 清空輸入框
+            document.getElementById('emailInput').value = '';
+            document.getElementById('passwordInput').value = '';
+        } catch (error) {
+            console.error('❌ 註冊失敗：', error);
+            showToast('❌ 註冊失敗：' + error.message, 'error', 4000);
+        }
+    });
+
+    document.getElementById('signInBtn').addEventListener('click', async () => {
+        const email = document.getElementById('emailInput').value.trim();
+        const password = document.getElementById('passwordInput').value.trim();
+        if (!email || !password) {
+            showToast('⚠️ 請輸入電子郵件和密碼', 'error', 2000);
+            return;
+        }
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            console.log('✅ 登入成功！', userCredential.user.email);
+            showToast('✅ 登入成功！', 'success', 2000);
+            // 清空輸入框
+            document.getElementById('emailInput').value = '';
+            document.getElementById('passwordInput').value = '';
+        } catch (error) {
+            console.error('❌ 登入失敗：', error);
+            showToast('❌ 登入失敗：' + error.message, 'error', 4000);
+        }
+    });
 </script>
 </body>
 </html>
