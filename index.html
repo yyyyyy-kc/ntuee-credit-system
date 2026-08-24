@@ -444,17 +444,25 @@
         /* ===== 課程項目：水平並列，按鈕靠右 ===== */
         .course-item {
             display: flex;
-            justify-content: space-between;  /* 左右兩端對齊 */
-            align-items: center;             /* 垂直置中 */
-            padding: 4px 8px;
+            flex-wrap: wrap;              /* ✅ 關鍵：允許項目換行 */
+            justify-content: space-between;
+            align-items: center;          
+            padding: 8px 12px;
             background: #f4f7fc;
-            border-radius: 6px;
-            margin-bottom: 3px;
+            border-radius: 8px;
+            margin-bottom: 6px;
             font-size: var(--inner-font-size);
-            flex-wrap: nowrap;               /* ✅ 強制不換行，保證並列 */
-            gap: 8px;
+            gap: 12px;
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
         }
-
+        
+        .course-item .inline-edit-form {
+            width: 100%;
+            flex-basis: 100%;
+            order: 10;          /* 強制排在最後 */
+            margin-top: 6px;    /* 與上方內容保留間距 */
+        }
         /* 課程資訊（左側） */
         .course-item .info {
             flex: 1;                         /* 佔據剩餘空間 */
