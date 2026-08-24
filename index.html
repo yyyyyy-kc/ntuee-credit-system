@@ -133,7 +133,6 @@
             width: 100%;
         }
 
-        /* ===== 時間表表格本身 ===== */
         .timetable-table {
             width: 100%;
             border-collapse: collapse;
@@ -141,10 +140,8 @@
             background: #e9edf4;
             border-radius: 8px;
             table-layout: fixed;
-            min-width: 700px;   /* 觸發橫向滾動 */
-            width: max-content;
+            min-width: 700px;   /* 保持這個值，讓過窄時滾動 */
         }
-
         /* 固定首列 */
         .timetable-table th:first-child,
         .timetable-table td:first-child {
@@ -269,7 +266,20 @@
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); justify-content: center; align-items: center; z-index: 999; }
         .modal-overlay.active { display: flex; }
-        .modal-box { background: white; width: 820px; max-width: 96vw; max-height: 94vh; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; }
+        .modal-box {
+            background: white;
+            width: 820px;
+            max-width: 96vw;
+            height: 80vh;          /* ✅ 固定高度，無論摺疊與否，頁面大小都一樣 */
+            max-height: 95vh;      /* ✅ 手機或小螢幕時不超過視窗高度 */
+            min-height: 480px;     /* ✅ 確保太小時依然可用 */
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
         .modal-header { flex-shrink: 0; padding: 18px 24px 12px 24px; border-bottom: 2px solid #e9edf4; position: relative; }
         .modal-header h2 { margin: 0; color: #003366; font-size: calc(var(--base-font-size) * 1.25); padding-right: 40px; }
         .modal-close { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: calc(var(--base-font-size) * 1.8); cursor: pointer; color: #888; background: none; border: none; line-height: 1; }
@@ -424,14 +434,82 @@
         .btn-secondary { background: #6c757d; color: white; border: none; padding: 4px 14px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: var(--inner-font-size); }
         .btn-secondary:hover { background: #5a6268; }
 
-        .course-list { margin-top: 12px; border-top: 1px solid #ddd; padding-top: 10px; max-height: 200px; overflow-y: auto; }
-        .course-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #f4f7fc; border-radius: 6px; margin-bottom: 3px; font-size: var(--inner-font-size); flex-wrap: wrap; gap: 4px; }
-        .course-item .info { flex: 1; margin-right: 6px; }
-        .course-item .actions { display: flex; gap: 4px; }
-        .course-item .edit-btn { background: #f39c12; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-size: var(--inner-font-size); }
-        .course-item .edit-btn:hover { background: #d68910; }
-        .course-item .del-btn { background: #d32f2f; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-size: var(--inner-font-size); }
-        .course-item .del-btn:hover { background: #b71c1c; }
+        .course-list {
+            margin-top: 12px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            max-height: none;      /* ✅ 取消最大高度限制 */
+            overflow-y: visible;   /* ✅ 取消內部滾動，讓它自然延伸，由外層 modal-body 統一滾動 */
+        }
+        /* ===== 課程項目：水平並列，按鈕靠右 ===== */
+        .course-item {
+            display: flex;
+            justify-content: space-between;  /* 左右兩端對齊 */
+            align-items: center;             /* 垂直置中 */
+            padding: 4px 8px;
+            background: #f4f7fc;
+            border-radius: 6px;
+            margin-bottom: 3px;
+            font-size: var(--inner-font-size);
+            flex-wrap: nowrap;               /* ✅ 強制不換行，保證並列 */
+            gap: 8px;
+        }
+
+        /* 課程資訊（左側） */
+        .course-item .info {
+            flex: 1;                         /* 佔據剩餘空間 */
+            min-width: 0;                    /* 防止溢出 */
+            margin-right: 6px;
+            white-space: nowrap;             /* 文字不換行（過長則省略） */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 按鈕容器（右側） */
+        .course-item .actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;                 /* 不縮小，保持按鈕完整 */
+            align-items: center;
+        }
+
+        /* ===== 按鈕樣式（降低飽和度） ===== */
+        .course-item .edit-btn {
+            background: #f5b041;            /* 柔和橘 */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 12px;
+            cursor: pointer;
+            font-size: var(--inner-font-size);
+            transition: background 0.2s;
+        }
+        .course-item .edit-btn:hover {
+            background: #e67e22;
+        }
+
+        .course-item .del-btn {
+            background: #e57373;            /* 柔和紅 */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 12px;
+            cursor: pointer;
+            font-size: var(--inner-font-size);
+            transition: background 0.2s;
+        }
+        .course-item .del-btn:hover {
+            background: #c62828;
+        }
+        
+        /* 確保按鈕容器保持水平並排（若原本沒有的話，可以加上） */
+        .course-item .actions {
+            display: flex;
+            gap: 6px;               /* 按鈕間距 */
+            align-items: center;
+            flex-shrink: 0;          /* 防止被壓縮 */
+        }
+
         .empty-hint { color: #888; font-size: var(--inner-font-size); text-align: center; padding: 10px 0; }
 
         .preview-title { font-weight: 700; margin: 12px 0 4px; color: #003366; font-size: var(--inner-font-size); }
@@ -534,6 +612,47 @@
                 font-size: calc(var(--inner-font-size) * 0.9);
             }
         }
+        /* 強行debug顯示課表的大小問題 */
+        /* ===== 學期課表 Modal - 非全覽模式：列寬填滿容器 ===== */
+        #semesterModal:not(.full-view-mode) .timetable-table th:first-child,
+        #semesterModal:not(.full-view-mode) .timetable-table td:first-child {
+            width: 12% !important;
+        }
+
+        #semesterModal:not(.full-view-mode) .timetable-table th:not(:first-child),
+        #semesterModal:not(.full-view-mode) .timetable-table td:not(:first-child) {
+            width: 14.666% !important;
+        }
+
+       /* ===== 折疊標題通用 ===== */
+       .section-toggle {
+           cursor: pointer;
+           font-weight: 700;
+           font-size: calc(var(--base-font-size) * 1.0);
+           color: #003366;
+           padding: 6px 0 6px 4px;
+           border-bottom: 2px solid #d9e2ef;
+           user-select: none;
+           display: flex;
+           align-items: center;
+           gap: 6px;
+       }
+       .section-toggle:hover {
+           color: #002244;
+       }
+       .section-toggle .toggle-icon {
+           display: inline-block;
+           transition: transform 0.2s;
+           font-size: 0.8em;
+       }
+       .section-toggle.open .toggle-icon {
+           transform: rotate(90deg);
+       }
+       .section-content {
+           padding-left: 8px;
+           border-left: 3px solid #d9e2ef;
+       }
+        
     </style>
 
 
@@ -584,10 +703,8 @@
     <!-- 匯入 -->
     <button class="import-btn" id="importDataBtn">📥 匯入</button>
     <input type="file" id="fileInput" accept=".txt" />
-</div>
+    </div>
 
-    <!-- 登出按鈕（獨立） -->
-        <button id="logout-btn" class="export-btn" style="background:#6c757d;display:none;">🚪 登出</button>
     </div>
 
 <!-- ✅ Modal 移出 top-controls 外面 -->
@@ -665,53 +782,72 @@
     </div>
 
     <!-- Modal: 編輯課程 -->
-    <div class="modal-overlay" id="editModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h2 id="editModalTitle">編輯課程</h2>
-                <button class="modal-close" id="editModalClose">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div style="font-size:var(--inner-font-size);color:#555;margin-bottom:4px;" id="editModalSubtitle"></div>
+   <!-- Modal: 編輯課程 -->
+   <div class="modal-overlay" id="editModal">
+       <div class="modal-box">
+           <div class="modal-header">
+               <h2 id="editModalTitle">編輯課程</h2>
+               <button class="modal-close" id="editModalClose">&times;</button>
+           </div>
+           <div class="modal-body">
+               <div id="editModalSubtitle" style="font-size:var(--inner-font-size);color:#555;margin-bottom:12px;"></div>
 
-                <div class="form-row">
-                    <div class="form-group"><label>課程名稱</label><input type="text" id="courseName" placeholder="e.g. 電子學一" /></div>
-                    <div class="form-group"><label>學分數</label><input type="number" id="courseCredit" placeholder="3" min="0" step="0.5" /></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>流水號</label><input type="text" id="courseCode" placeholder="e.g. 901 12300" /></div>
-                    <div class="form-group"><label>授課老師</label><input type="text" id="courseTeacher" placeholder="e.g. 張三" /></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>上課地點</label><input type="text" id="courseLocation" placeholder="e.g. 博理112" /></div>
-                    <div class="form-group" style="display:flex;align-items:flex-end;gap:6px;">
-                        <div style="flex:1;"><label>上課時間</label><input type="text" id="courseTimeText" placeholder="點按鈕設定" readonly style="background:#eee;" /></div>
-                        <button class="btn-secondary" id="openTimePickerBtn" style="margin-bottom:1px;">🕒 設置</button>
-                    </div>
-                </div>
-                <div id="timePickerWrapper" style="display:none;border:2px solid #003366;border-radius:10px;padding:10px;margin:4px 0 8px;background:#f8faff;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                        <span style="font-weight:700;color:#003366;font-size:var(--inner-font-size);">點選時段 (灰色表示已佔用)</span>
-                        <button class="btn-secondary" id="closeTimePickerBtn">✕ 關閉</button>
-                    </div>
-                    <div id="editTimetableContainer"></div>
-                    <div style="text-align:right;margin-top:4px;">
-                        <button class="btn-secondary" id="clearTimeSelectionBtn">清除選取</button>
-                    </div>
-                </div>
+               <!-- ===== 區塊 1：加入新課程（折疊） ===== -->
+               <div class="section-toggle" data-target="addCourseSection">
+                   <span class="toggle-icon">▶</span> 加入新課程
+               </div>
+               <div id="addCourseSection" class="section-content" style="display:none; margin-top:8px;">
+                   <div class="form-row">
+                       <div class="form-group"><label>課程名稱</label><input type="text" id="courseName" placeholder="e.g. 電子學一" /></div>
+                       <div class="form-group"><label>學分數</label><input type="number" id="courseCredit" placeholder="3" min="0" step="0.5" /></div>
+                   </div>
+                   <div class="form-row">
+                       <div class="form-group"><label>流水號</label><input type="text" id="courseCode" placeholder="e.g. 901 12300" /></div>
+                       <div class="form-group"><label>授課老師</label><input type="text" id="courseTeacher" placeholder="e.g. 張三" /></div>
+                   </div>
+                   <div class="form-row">
+                       <div class="form-group"><label>上課地點</label><input type="text" id="courseLocation" placeholder="e.g. 博理112" /></div>
+                       <div class="form-group" style="display:flex;align-items:flex-end;gap:6px;">
+                           <div style="flex:1;"><label>上課時間</label><input type="text" id="courseTimeText" placeholder="點按鈕設定" readonly style="background:#eee;" /></div>
+                           <button class="btn-secondary" id="openTimePickerBtn" style="margin-bottom:1px;">🕒 設置</button>
+                       </div>
+                   </div>
+                   <div id="timePickerWrapper" style="display:none;border:2px solid #003366;border-radius:10px;padding:10px;margin:4px 0 8px;background:#f8faff;">
+                       <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                           <span style="font-weight:700;color:#003366;font-size:var(--inner-font-size);">點選時段 (灰色表示已佔用)</span>
+                           <button class="btn-secondary" id="closeTimePickerBtn">✕ 關閉</button>
+                       </div>
+                       <div id="editTimetableContainer"></div>
+                       <div style="text-align:right;margin-top:4px;">
+                           <button class="btn-secondary" id="clearTimeSelectionBtn">清除選取</button>
+                       </div>
+                   </div>
+                   <button class="btn-primary" id="addCourseBtn" style="width:100%;margin-top:4px;">➕ 加入課程</button>
+               </div>
 
-                <button class="btn-primary" id="addCourseBtn" style="width:100%;margin-top:4px;">➕ 加入課程</button>
+               <!-- ===== 區塊 2：查看本學期所有【類別】課程（折疊） ===== -->
+               <div class="section-toggle" data-target="categoryCourseListSection" style="margin-top:16px;">
+                   <span class="toggle-icon">▶</span> 本學期所有【<span id="categoryNameDisplay">系訂必修</span>】課程
+               </div>
+               <div id="categoryCourseListSection" class="section-content" style="display:none; margin-top:8px;">
+                   <div class="course-list" id="courseListContainer">
+                       <div class="empty-hint">尚無課程</div>
+                   </div>
+               </div>
 
-                <div class="preview-title" style="margin-top:12px;">📋 本學期所有課程 (點擊方塊看詳情)</div>
-                <div class="course-list" id="courseListContainer">
-                    <div class="empty-hint">尚無課程</div>
-                </div>
-                <div id="previewTimetableContainer" style="margin-top:10px;"></div>
+               <!-- ===== 區塊 3：本學期所有課程（折疊） ===== -->
+               <div class="section-toggle" data-target="allCoursesTimetableSection" style="margin-top:16px;">
+                   <span class="toggle-icon">▶</span> 本學期所有課程
+               </div>
+               <div id="allCoursesTimetableSection" class="section-content" style="display:none; margin-top:8px;">
+                   <div id="previewTimetableContainer"></div>
+               </div>
 
-                <input type="hidden" id="editIndex" value="-1" />
-            </div>
-        </div>
-    </div>
+               <input type="hidden" id="editIndex" value="-1" />
+           </div>
+       </div>
+   </div>
+
 
     <!-- Modal: 課程詳細資訊 -->
     <div class="modal-overlay" id="infoModal">
@@ -1094,7 +1230,18 @@
             const tdLabel = document.createElement('td');
             tdLabel.className = 'period-label';
             const timeStr = getPeriodTime(p);
-            tdLabel.textContent = p + (timeStr ? '\n' + timeStr : '');
+            let labelText = p;
+            if (timeStr) {
+                const parts = timeStr.split('-');
+                if (parts.length === 2) {
+                    // 拆分成開始和結束時間，放入第二、三行
+                    labelText = p + '\n' + parts[0].trim() + '\n' + parts[1].trim();
+                } else {
+                    // 若格式不符，仍顯示原樣
+                    labelText = p + '\n' + timeStr;
+                }
+            }
+            tdLabel.textContent = labelText;
             tr.appendChild(tdLabel);
             DAYS.forEach((day, idx) => {
                 const dayKey = String(idx + 1);
@@ -1175,17 +1322,30 @@
         container.appendChild(wrapper);
     }
 
-    function updateTimeTextFromSelection() {
-        const container = document.getElementById('editTimetableContainer');
-        const selected = container.querySelectorAll('.slot.editable.selected');
-        const times = [];
-        selected.forEach(el => {
-            const day = el.dataset.day;
-            const period = el.dataset.period;
-            if (day && period) times.push(DAYS[parseInt(day)-1] + period);
-        });
-        document.getElementById('courseTimeText').value = times.join(' ');
-    }
+   function updateTimeTextFromSelection() {
+       const container = document.getElementById('editTimetableContainer');
+       const selected = container.querySelectorAll('.slot.editable.selected');
+       const times = [];
+       selected.forEach(el => {
+           const day = el.dataset.day;
+           const period = el.dataset.period;
+           if (day && period) times.push(DAYS[parseInt(day)-1] + period);
+       });
+       const timeStr = times.join(' ');
+       
+       // 判斷是新增還是編輯
+       if (editingCourseIndex === -1) {
+           // 新增模式：更新 #courseTimeText
+           document.getElementById('courseTimeText').value = timeStr;
+       } else {
+           // 編輯模式：更新對應內嵌表單的 .inline-time
+           const form = document.getElementById(`inlineEditForm_${editingCourseIndex}`);
+           if (form) {
+               const timeInput = form.querySelector('.inline-time');
+               if (timeInput) timeInput.value = timeStr;
+           }
+       }
+   }
 
     function parseTimeTextToSchedule(text) {
         const sched = {};
@@ -1708,18 +1868,21 @@
     }
 
     // ======================== Modal: 編輯課程 ========================
+    // ======================== Modal: 編輯課程 ========================
     let currentSem = '', currentCat = '';
-    let editIndex = -1;
+    let editingCourseIndex = -1; // -1 表示新增模式，>=0 表示正在編輯的課程索引
 
     async function openEditModal(sem, cat, idx) {
         currentSem = sem;
         currentCat = cat;
-        editIndex = idx;
         const catIdx = CAT_KEY.indexOf(cat);
-        const mode = idx === -1 ? '新增' : '編輯';
-        document.getElementById('editModalTitle').textContent = `📖 ${sem} · ${CATEGORIES[catIdx]} (${mode})`;
-        document.getElementById('editModalSubtitle').textContent = mode === '新增' ? '輸入新課程資訊' : '修改課程資訊';
-
+        const catName = CATEGORIES[catIdx] || '';
+        
+        // 設定標題
+        document.getElementById('editModalTitle').textContent = `📖 ${sem} · ${catName}`;
+        document.getElementById('editModalSubtitle').textContent = '管理此類別的課程';
+        
+        // 重置新增表單
         document.getElementById('courseName').value = '';
         document.getElementById('courseCredit').value = '';
         document.getElementById('courseCode').value = '';
@@ -1727,45 +1890,32 @@
         document.getElementById('courseLocation').value = '';
         document.getElementById('courseTimeText').value = '';
         document.getElementById('timePickerWrapper').style.display = 'none';
-        document.getElementById('editIndex').value = idx;
-
-    // 🔽 載入最新資料
+        document.getElementById('editIndex').value = '-1';
+        editingCourseIndex = -1; // 預設為新增模式
+        
+        // 更新類別名稱顯示（用於第二個折疊標題）
+        document.getElementById('categoryNameDisplay').textContent = catName;
+        
+        // 載入最新資料
         const currentData = await loadData();
-
-        if (idx !== -1) {
-            const course = currentData[sem]?.[cat]?.courses?.[idx];
-            if (course) {
-                document.getElementById('courseName').value = course.name || '';
-                document.getElementById('courseCredit').value = course.credit || '';
-                document.getElementById('courseCode').value = course.code || '';
-                document.getElementById('courseTeacher').value = course.teacher || '';
-                document.getElementById('courseLocation').value = course.location || '';
-                document.getElementById('courseTimeText').value = course.time || '';
-            }
-        }
-
-        updateAddButtonText();
-
-        const occupied = await getOccupiedSlots(sem);
-        const timeText = document.getElementById('courseTimeText').value;
-        const selected = parseTimeTextToSchedule(timeText);
-        renderTimetable('editTimetableContainer', { mode: 'edit', selected: selected, occupied: occupied });
-    
-    // 🔽 傳入 currentData
-        renderPreviewTimetable(currentData);
+        
+        // 渲染課程清單（包含內嵌編輯表單）
         renderCourseList(currentData);
-
+        // 渲染預覽時間表（全部課程）
+        renderPreviewTimetable(currentData);
+        // 渲染時間選擇器（空的佔用狀態）
+        const occupied = await getOccupiedSlots(sem);
+        renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: occupied });
+        
+        // 預設所有折疊區塊關閉
+        document.querySelectorAll('.section-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.section-toggle').forEach(el => el.classList.remove('open'));
+        
+        // 如果是指定編輯某課程（透過 idx 參數），則自動展開該課程的編輯表單？
+        // 但這裡我們不自動展開，因為使用者希望點擊「編輯」按鈕才展開。
+        // 所以忽略 idx 參數，只開啟 Modal
+        
         document.getElementById('editModal').classList.add('active');
-    }
-
-    function updateAddButtonText() {
-        const btn = document.getElementById('addCourseBtn');
-        const idx = parseInt(document.getElementById('editIndex').value);
-        if (idx >= 0) {
-            btn.textContent = '✏️ 確定更改';
-        } else {
-            btn.textContent = '➕ 加入課程';
-        }
     }
 
     function renderPreviewTimetable(data) {
@@ -1786,7 +1936,6 @@
 
     function renderCourseList(data) {
         const container = document.getElementById('courseListContainer');
-        // 直接使用傳入的 data
         const courses = data[currentSem]?.[currentCat]?.courses || [];
         if (courses.length === 0) {
             container.innerHTML = '<div class="empty-hint">尚無課程</div>';
@@ -1794,26 +1943,84 @@
         }
         let html = '';
         courses.forEach((c, idx) => {
+            // 使用 formatTimeString 格式化時間，顯示為 "一3-4，五3-4"
             const displayTime = formatTimeString(c.time);
+            
+            // --- 修改開始：構建新的兩行格式 ---
+            // 第一行：課程名稱 (學分) · 教師 · 地點
+            const line1Parts = [];
+            line1Parts.push(`<strong>${escapeHtml(c.name || '未命名')}</strong>`);
+            line1Parts.push(`(${escapeHtml(c.credit || 0)}學分)`);
+            if (c.teacher) line1Parts.push(`· ${escapeHtml(c.teacher)}`);
+            if (c.location) line1Parts.push(`· ${escapeHtml(c.location)}`);
+            const line1 = line1Parts.join(' ');
+
+            // 第二行：流水號 · 上課時間 (若流水號或時間不存在則隱藏對應部分)
+            const line2Parts = [];
+            if (c.code) line2Parts.push(`<span class="course-code">${escapeHtml(c.code)}</span>`);
+            if (displayTime) line2Parts.push(`<span class="course-time-display">${escapeHtml(displayTime)}</span>`);
+            // 如果兩者皆無，顯示一個佔位符
+            if (line2Parts.length === 0) line2Parts.push('<span class="course-time-display" style="color:#bbb;">—</span>');
+            const line2 = line2Parts.join(' · ');
+            // --- 修改結束 ---
+
             html += `
                 <div class="course-item" data-idx="${idx}">
-                    <span class="info"><strong>${escapeHtml(c.name || '未命名')}</strong> (${escapeHtml(c.credit || 0)}學分) ${escapeHtml(c.teacher ? '· '+c.teacher : '')} ${escapeHtml(c.location ? '· '+c.location : '')} ${displayTime ? '· '+escapeHtml(displayTime) : ''}</span>
+                    <div class="course-info">
+                        <div class="course-line1">${line1}</div>
+                        <div class="course-line2">${line2}</div>
+                    </div>
                     <div class="actions">
-                        <button class="edit-btn" data-idx="${idx}">✏️ 編輯</button>
+                        <button class="edit-btn" data-idx="${idx}">✏️ 修改</button>
                         <button class="del-btn" data-idx="${idx}">刪除</button>
                     </div>
+                    <!-- 內嵌編輯表單（保持不變） -->
+                    <div class="inline-edit-form" id="inlineEditForm_${idx}" style="display:none; margin-top:8px; padding:10px; background:#f8faff; border-radius:8px; border:1px solid #b0c4de; width:100%;">
+                        <div class="form-row">
+                            <div class="form-group"><label>課程名稱</label><input type="text" class="inline-name" value="${escapeHtml(c.name || '')}" /></div>
+                            <div class="form-group"><label>學分數</label><input type="number" class="inline-credit" value="${c.credit || 0}" min="0" step="0.5" /></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>流水號</label><input type="text" class="inline-code" value="${escapeHtml(c.code || '')}" /></div>
+                            <div class="form-group"><label>授課老師</label><input type="text" class="inline-teacher" value="${escapeHtml(c.teacher || '')}" /></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>上課地點</label><input type="text" class="inline-location" value="${escapeHtml(c.location || '')}" /></div>
+                            <div class="form-group" style="display:flex;align-items:flex-end;gap:6px;">
+                                <div style="flex:1;"><label>上課時間</label><input type="text" class="inline-time" value="${escapeHtml(c.time || '')}" readonly style="background:#eee;" /></div>
+                                <button class="btn-secondary inline-time-picker-btn" data-idx="${idx}" style="margin-bottom:1px;">🕒 設置</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:8px;">
+                            <button class="btn-secondary inline-cancel-btn" data-idx="${idx}">取消修改</button>
+                            <button class="btn-primary inline-confirm-btn" data-idx="${idx}">確認修改</button>
+                        </div>
+                    </div>
                 </div>
-        `   ;
+            `;
         });
         container.innerHTML = html;
 
+        // --- 綁定事件 ---
+        // 編輯按鈕
         container.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const idx = parseInt(this.dataset.idx);
-                openEditModal(currentSem, currentCat, idx);
+                // 關閉其他已展開的編輯表單
+                document.querySelectorAll('.inline-edit-form').forEach(f => f.style.display = 'none');
+                // 展開當前編輯表單
+                const form = document.getElementById(`inlineEditForm_${idx}`);
+                if (form) {
+                    form.style.display = 'block';
+                    // 設定當前編輯索引
+                    editingCourseIndex = idx;
+                    // 若有需要，可將時間選擇器對應到此表單
+                    // 但時間選擇器是全局的，我們透過 editingCourseIndex 來判斷
+                }
             });
         });
 
+        // 刪除按鈕
         container.querySelectorAll('.del-btn').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const idx = parseInt(this.dataset.idx);
@@ -1828,14 +2035,117 @@
                     updateCellHighlight(currentSem, currentCat, data);
                     const occupied = await getOccupiedSlots(currentSem);
                     renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: occupied });
-                    if (data[currentSem][currentCat].courses.length === 0) {
-                        document.getElementById('editIndex').value = '-1';
-                        updateAddButtonText();
-                    }
                     showToast('🗑️ 已刪除課程！', 'success', 2000);
+                    // 重置編輯索引
+                    editingCourseIndex = -1;
                 }
             });
         });
+
+        // 內嵌編輯 - 確認修改
+        container.querySelectorAll('.inline-confirm-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const idx = parseInt(this.dataset.idx);
+                await updateCourseInline(idx);
+            });
+        });
+
+        // 內嵌編輯 - 取消修改
+        container.querySelectorAll('.inline-cancel-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const idx = parseInt(this.dataset.idx);
+                const form = document.getElementById(`inlineEditForm_${idx}`);
+                if (form) {
+                    form.style.display = 'none';
+                    editingCourseIndex = -1;
+                }
+            });
+        });
+
+        // 內嵌編輯 - 時間設置按鈕（點擊後打開全局時間選擇器，並標記當前編輯的課程）
+        container.querySelectorAll('.inline-time-picker-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const idx = parseInt(this.dataset.idx);
+                editingCourseIndex = idx; // 設定當前編輯目標
+                // 打開時間選擇器面板
+                const wrapper = document.getElementById('timePickerWrapper');
+                if (wrapper.style.display === 'none') {
+                    wrapper.style.display = 'block';
+                    // 重繪時間選擇器，帶入已選時間
+                    const timeInput = document.querySelector(`#inlineEditForm_${idx} .inline-time`);
+                    if (timeInput) {
+                        const selected = parseTimeTextToSchedule(timeInput.value);
+                        const occupied = getOccupiedSlots(currentSem); // 注意：這裡需要 await，但我們在 async 中，可以使用立即執行
+                        // 因為 getOccupiedSlots 是 async，我們需要異步處理
+                        (async () => {
+                            const occ = await getOccupiedSlots(currentSem);
+                            renderTimetable('editTimetableContainer', { mode: 'edit', selected: selected, occupied: occ });
+                        })();
+                    }
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    async function updateCourseInline(idx) {
+        const form = document.getElementById(`inlineEditForm_${idx}`);
+        if (!form) return;
+        const nameInput = form.querySelector('.inline-name');
+        const creditInput = form.querySelector('.inline-credit');
+        const codeInput = form.querySelector('.inline-code');
+        const teacherInput = form.querySelector('.inline-teacher');
+        const locationInput = form.querySelector('.inline-location');
+        const timeInput = form.querySelector('.inline-time');
+        
+        const name = nameInput.value.trim();
+        const credit = parseFloat(creditInput.value) || 0;
+        const code = codeInput.value.trim();
+        const teacher = teacherInput.value.trim();
+        const location = locationInput.value.trim();
+        const timeText = timeInput.value.trim();
+        
+        if (!name) {
+            showToast('⚠️ 請輸入課程名稱', 'error', 2000);
+            return;
+        }
+        
+        const data = await loadData();
+        if (!data[currentSem] || !data[currentSem][currentCat]) {
+            showToast('⚠️ 資料錯誤', 'error', 2000);
+            return;
+        }
+        const courses = data[currentSem][currentCat].courses;
+        if (idx < 0 || idx >= courses.length) {
+            showToast('⚠️ 課程索引無效', 'error', 2000);
+            return;
+        }
+        
+        const schedule = parseTimeTextToSchedule(timeText);
+        courses[idx] = {
+            name,
+            credit,
+            code,
+            teacher,
+            location,
+            time: timeText,
+            schedule
+        };
+        data[currentSem][currentCat].credits = calcCategoryCredits(data, currentSem, currentCat);
+        await saveData(data);
+        const updatedData = await loadData();
+        refreshAllInputs(updatedData);
+        renderCourseList(updatedData);
+        renderPreviewTimetable(updatedData);
+        updateCellHighlight(currentSem, currentCat, updatedData);
+        const occupied = await getOccupiedSlots(currentSem);
+        renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: occupied });
+        
+        // 折疊編輯表單
+        form.style.display = 'none';
+        editingCourseIndex = -1;
+        showToast('✅ 已更新課程！', 'success', 2000);
     }
 
     async function saveCourseFromForm() {
@@ -1854,15 +2164,8 @@
         const schedule = parseTimeTextToSchedule(timeText);
         const courseData = { name, credit, code, teacher, location, time: timeText, schedule };
 
-        const idx = parseInt(document.getElementById('editIndex').value);
-        let isUpdate = false;
-        if (idx >= 0 && idx < data[currentSem][currentCat].courses.length) {
-            data[currentSem][currentCat].courses[idx] = courseData;
-            isUpdate = true;
-        } else {
-            data[currentSem][currentCat].courses.push(courseData);
-            isUpdate = false;
-        }
+        // 新增（不再支援更新）
+        data[currentSem][currentCat].courses.push(courseData);
         data[currentSem][currentCat].credits = calcCategoryCredits(data, currentSem, currentCat);
         await saveData(data);
         const updatedData = await loadData();
@@ -1871,6 +2174,7 @@
         renderPreviewTimetable(updatedData);
         updateCellHighlight(currentSem, currentCat, updatedData);
 
+        // 清空新增表單
         document.getElementById('courseName').value = '';
         document.getElementById('courseCredit').value = '';
         document.getElementById('courseCode').value = '';
@@ -1878,10 +2182,8 @@
         document.getElementById('courseLocation').value = '';
         document.getElementById('courseTimeText').value = '';
         document.getElementById('timePickerWrapper').style.display = 'none';
-        document.getElementById('editIndex').value = '-1';
-        updateAddButtonText();
 
-        showToast(isUpdate ? '✅ 已更新課程！' : '✅ 已加入課程！', 'success', 2000);
+        showToast('✅ 已加入課程！', 'success', 2000);
 
         const occupied = await getOccupiedSlots(currentSem);
         renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: occupied });
@@ -2062,7 +2364,17 @@
             const wrapper = document.getElementById('timePickerWrapper');
             if (wrapper.style.display === 'none') {
                 wrapper.style.display = 'block';
-                const timeText = document.getElementById('courseTimeText').value;
+                // 決定要顯示哪個時間
+                let timeText = '';
+                if (editingCourseIndex === -1) {
+                    timeText = document.getElementById('courseTimeText').value;
+                } else {
+                    const form = document.getElementById(`inlineEditForm_${editingCourseIndex}`);
+                    if (form) {
+                        const timeInput = form.querySelector('.inline-time');
+                        if (timeInput) timeText = timeInput.value;
+                    }
+                }
                 const selected = parseTimeTextToSchedule(timeText);
                 const occupied = await getOccupiedSlots(currentSem);
                 renderTimetable('editTimetableContainer', { mode: 'edit', selected: selected, occupied: occupied });
@@ -2074,7 +2386,15 @@
             document.getElementById('timePickerWrapper').style.display = 'none';
         });
         document.getElementById('clearTimeSelectionBtn').addEventListener('click', function() {
-            document.getElementById('courseTimeText').value = '';
+            if (editingCourseIndex === -1) {
+                document.getElementById('courseTimeText').value = '';
+            } else {
+                const form = document.getElementById(`inlineEditForm_${editingCourseIndex}`);
+                if (form) {
+                    const timeInput = form.querySelector('.inline-time');
+                    if (timeInput) timeInput.value = '';
+                }
+            }
             renderTimetable('editTimetableContainer', { mode: 'edit', selected: {}, occupied: {} });
             document.getElementById('timePickerWrapper').style.display = 'none';
         });
@@ -2263,6 +2583,18 @@
             document.getElementById('emailLoginModal').classList.remove('active');
         });
 
+        // 折疊標題點擊切換
+        document.querySelectorAll('.section-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const content = document.getElementById(targetId);
+                if (content) {
+                    const isOpen = content.style.display !== 'none';
+                    content.style.display = isOpen ? 'none' : 'block';
+                    this.classList.toggle('open', !isOpen);
+                }
+            });
+        });
 
     }//int的結束符 千萬不要動
 
