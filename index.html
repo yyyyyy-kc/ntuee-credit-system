@@ -124,9 +124,41 @@
             margin-bottom: 8px;
         }
 
+
+        /* ===== 時間表外層滾動容器 ===== */
+        .timetable-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 8px;
+            width: 100%;
+        }
+
+        /* ===== 時間表表格本身 ===== */
         .timetable-table {
-            min-width: 600px;      /* 確保表格不會被壓縮得太小，可依需要調整 */
-            width: max-content;    /* 讓表格寬度根據內容自動擴展 */
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--inner-font-size);
+            background: #e9edf4;
+            border-radius: 8px;
+            table-layout: fixed;
+            min-width: 700px;   /* 觸發橫向滾動 */
+            width: max-content;
+        }
+
+        /* 固定首列 */
+        .timetable-table th:first-child,
+        .timetable-table td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: white; /* 確保不透明 */
+        }
+        .timetable-table th:first-child {
+            z-index: 2;
+            background: #003366;
+        }
+        .timetable-table td:first-child {
+            border-right: 2px solid #b0c4de;
         }
 
         /* ===== 頂部卡片（新增三角與摺疊） ===== */
@@ -244,7 +276,48 @@
         .modal-close:hover { color: #000; }
         .modal-body { flex: 1; overflow-y: auto; padding: 16px 24px 24px 24px; }
 
-        .timetable-table { width: 100%; border-collapse: collapse; font-size: var(--inner-font-size); background: #e9edf4; border-radius: 8px; overflow: hidden; table-layout: fixed; }
+       /* 全覽模式專用樣式（只影響學期總課表） */
+       #semesterModal.full-view-mode .timetable-wrapper {
+           overflow-x: visible !important;
+       }
+
+       #semesterModal.full-view-mode .timetable-table {
+           width: 100% !important;
+           min-width: unset !important;
+           table-layout: fixed !important;
+       }
+
+       #semesterModal.full-view-mode .timetable-table th,
+       #semesterModal.full-view-mode .timetable-table td {
+           width: 14.28% !important;
+       }
+
+       #semesterModal.full-view-mode .timetable-table .period-label {
+           font-size: 9px !important;
+           padding: 2px 0 !important;
+       }
+
+       #semesterModal.full-view-mode .timetable-table .slot .course-block {
+           padding: 2px 3px !important;
+           min-height: 28px !important;
+           max-width: none !important;
+           font-size: 9px !important;
+       }
+
+       #semesterModal.full-view-mode .timetable-table .slot .course-block .course-name {
+           font-size: 9px !important;
+       }
+
+       #semesterModal.full-view-mode .timetable-table .slot .course-block .course-location {
+           font-size: 7px !important;
+           margin-top: 0 !important;
+       }
+
+       #semesterModal.full-view-mode .timetable-table th {
+           font-size: 11px !important;
+           padding: 4px 0 !important;
+       }
+
         .timetable-table th, .timetable-table td { border: 1px solid #ccc; padding: 4px 2px; text-align: center; vertical-align: middle; background: white; height: calc(var(--base-font-size) * 2.2); width: 14%; }
         .timetable-table th { background: #003366; color: white; font-weight: 700; padding: 6px 0; }
         .timetable-table .period-label {
@@ -472,6 +545,7 @@
         <img src="ntu-logo.png" alt="臺大校徽" style="height: 1.5em; vertical-align: middle; margin-right: 6px;">
         NTUEE 學分管理
     </h1>
+
     <div class="subtitle">畢業 137 學分 · 點擊學期名稱看總課表 · 點擊學分格子編輯課程</div>
 
     <div class="top-controls">
@@ -563,17 +637,29 @@
         </table>
     </div>
 
+
     <!-- Modal: 學期總課表 -->
     <div class="modal-overlay" id="semesterModal">
         <div class="modal-box">
-            <div class="modal-header">
-                <h2 id="semesterModalTitle">📖 學期總課表</h2>
-                <button class="modal-close" id="semesterModalClose">&times;</button>
+            <!-- ===== 標題欄（Header） ===== -->
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="semesterModalTitle" style="margin:0; padding-right: 10px;">📖 學期總課表</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <!-- 全覽按鈕 -->
+                    <button id="toggleFullViewBtn" class="btn-secondary" style="background: #2c7be5; color: white; border: none; padding: 4px 14px; border-radius: 30px; font-weight: 600; cursor: pointer; font-size: calc(var(--inner-font-size) * 0.85); transition: background 0.2s;">
+                        📊 開啟全覽
+                    </button>
+                    <!-- 關閉按鈕 -->
+                    <button class="modal-close" id="semesterModalClose" style="position: static; transform: none; font-size: calc(var(--base-font-size) * 1.8);">&times;</button>
+                </div>
             </div>
+            <!-- ===== 內容區（Body） ===== -->
             <div class="modal-body">
                 <div id="semesterTimetableContainer" style="margin-top:8px;"></div>
                 <div id="semesterCourseList" class="course-list-box"></div>
-                <div style="text-align:right;margin-top:10px;"><button class="btn-secondary" id="semesterModalCloseBtn">關閉</button></div>
+                <div style="text-align:right;margin-top:10px;">
+                    <button class="btn-secondary" id="semesterModalCloseBtn">關閉</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1079,8 +1165,14 @@
             tbody.appendChild(tr);
         });
         table.appendChild(tbody);
+        // 建立外層滾動容器
+        const wrapper = document.createElement('div');
+        wrapper.className = 'timetable-wrapper';
+        wrapper.appendChild(table);
+
+        // 清空容器並放入 wrapper
         container.innerHTML = '';
-        container.appendChild(table);
+        container.appendChild(wrapper);
     }
 
     function updateTimeTextFromSelection() {
@@ -1606,6 +1698,13 @@
             listContainer.innerHTML = listHtml;
         }
         document.getElementById('semesterModal').classList.add('active');
+        document.getElementById('semesterModal').classList.remove('full-view-mode');
+        // 重置按鈕狀態
+        const btn = document.getElementById('toggleFullViewBtn');
+        if (btn) {
+            btn.textContent = '📊 開啟全覽';
+            btn.style.background = '#2c7be5';
+        }
     }
 
     // ======================== Modal: 編輯課程 ========================
@@ -1881,6 +1980,24 @@
                 document.getElementById('foot-sum').innerHTML = '<span class="total-number">0</span> <span class="progress-text">/ 137</span>';
                 console.log("🔒 已登出");
             }
+        });
+
+        // 全覽按鈕事件（使用事件委託，監聽整個 document）
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('#toggleFullViewBtn');
+            if (!btn) return;
+            
+            // 找到所屬的 Modal
+            const modal = document.getElementById('semesterModal');
+            if (!modal) return;
+            
+            // 切換 full-view-mode 類別
+            modal.classList.toggle('full-view-mode');
+            const isFullView = modal.classList.contains('full-view-mode');
+            
+            // 更新按鈕文字與顏色
+            btn.textContent = isFullView ? '📊 關閉全覽' : '📊 開啟全覽';
+            btn.style.background = isFullView ? '#dc3545' : '#2c7be5';
         });
 
         // ---- 登入按鈕（已加入成功回調） ----
